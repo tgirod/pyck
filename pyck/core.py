@@ -90,22 +90,6 @@ class Event(object):
 
 
 
-""" Duration functions """
-
-def sample(dur):
-    return dur
-
-def ms(dur):
-    return int(Server.samplerate * dur / 1000)
-
-def second(dur):
-    return int(Server.samplerate * dur)
-
-def minute(dur):
-    return int(Server.samplerate * dur * 60)
-
-def hour(dur):
-    return int(Server.samplerate * dur * 60 * 60)
 
 if __name__ == "__main__":
     from random import random
