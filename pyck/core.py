@@ -87,31 +87,3 @@ class Event(object):
         for s in self.q:
             s.send(*args)
         self.shreds = []
-
-
-
-
-if __name__ == "__main__":
-    from random import random
-    s = Server()
-    
-    e = Event(s)
-    
-    def printShred(event):
-        while True:
-            text = yield event
-            print "waking up!", text
-
-    s.spork(printShred,e)
-
-    def genShred(event):
-        while True:
-            x = random()
-            print "sending", x
-            event.signal(x)
-            yield 3
-    s.spork(genShred,e)
-    
-    s.run()
-    
-    
