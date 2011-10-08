@@ -1,13 +1,13 @@
 class Server(object):
     """ Server is the central class taking care of the shreduling. """
     
-    def __init__(self,samplerate=44100,ins=2,outs=2):
+    def __init__(self,samplerate=44100,inputs=2,outputs=2):
         self._samplerate = samplerate
-        self._ins = ins
-        self._outs = outs
         self._now = 0
         self._queue = {}
-    
+        self._adc = Adc(self,inputs)
+        self._dac = Dac(self,outputs)
+
     @property
     def samplerate(self):
         return self._samplerate
@@ -15,6 +15,14 @@ class Server(object):
     @property
     def now(self):
         return self._now
+
+    @property
+    def adc(self):
+        return self._adc
+
+    @property
+    def dac(self):
+        return self._dac
     
     def shredule(self,time,shred):
         """ shredule the given shred at the given time """
@@ -29,6 +37,7 @@ class Server(object):
     
     def step(self):
         self.runShreds()
+        self.runUGens()
         self._now += 1
 
     def run(self):
@@ -56,6 +65,9 @@ class Server(object):
                 except StopIteration:
                     # the shred terminates
                     pass
+
+    def runUGens(self):
+        self._dac()
 
 class Event(object):
     """ The Event class allows communication between various parts of code :
@@ -221,3 +233,43 @@ class Outlet(object):
 
     def __del__(self):
         disconnectAll()
+
+
+class Adc(UGen):
+
+    def __init__(self,server,inputs):
+        UGen.__init__(self,server)
+        self._outlet = [Outlet(self) for _ in range(inputs)]
+    
+    def __delete__(self):
+        for o in self._outlet:
+            del o
+
+    @property
+    def outlet(self):
+        return self._outlet
+    
+    def compute(self):
+        # transmit the signal from jack
+        pass
+    
+class Dac(UGen):
+
+    def __init__(self,server,outputs):
+        UGen.__init__(self,server)
+        self._inlet = [Inlet(self) for _ in range(outputs)]
+    
+    def __delete__(self):
+        for i in self._inlet:
+            del i
+
+    @property
+    def inlet(self):
+        return self._inlet
+
+    def compute(self):
+        # transmit the signal to jack
+        for i in self._inlet:
+            i()
+            print i.value, "\t",
+        print ""
