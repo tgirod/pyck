@@ -97,3 +97,127 @@ class Event(object):
             s.send(*args)
         self._queue = []
 
+
+class UGen(object):
+    """ parent class of all ugens. Ugens should implement the following methods:
+    * compute, to do the actual computation
+    * __delete__ to destroy the inlets/outlets attached to the ugen
+    """
+    
+    def __init__(self,server):
+        self._server = server
+        self._now = server.now
+    
+    @property
+    def server(self):
+        return self._server
+    
+    @property
+    def now(self):
+        return self._now
+    
+    def __call__(self):
+        if self._now < self._server.now:
+            self._now = self._server.now
+            self.compute()
+
+    def compute(self):
+        """ 
+        This method should be implemented in derived classes its purpose is to:
+        * calls each inlet to get new values
+        * perform actual computation
+        * store the results in outlets
+        """
+        raise NotImplementedError()
+
+
+class Inlet(object):
+    def __init__(self,ugen):
+        self._sources = []
+        self._value = 0.0
+        self._ugen = ugen
+    
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self,value):
+        self._value = value
+
+    @property
+    def ugen(self):
+        return self._ugen
+    
+    def addSource(self,source):
+        if source not in self._sources:
+            self._sources.append(source)
+
+    def delSource(self,source):
+        if source in self._sources:
+            self._sources.remove(source)
+
+    def connect(self,source):
+        self.addSource(source)
+        source.addTarget(self)
+
+    def disconnect(self,source):
+        self.delSource(source)
+        source.delTarget(self)
+
+    def disconnectAll(self):
+        for s in self._sources:
+            self.disconnect(s)
+
+    def __call__(self):
+        self.value = 0.0
+        for s in self._sources:
+            self.value += s()
+
+    def __del__(self):
+        disconnectAll()
+
+class Outlet(object):
+    def __init__(self,ugen):
+        self._targets = []
+        self._value = 0.0
+        self._ugen = ugen
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self,value):
+        self._value = value
+
+    @property
+    def ugen(self):
+        return self._ugen
+
+    def addTarget(self,target):
+        if target not in self._targets:
+            self._targets.append(target)
+
+    def delTarget(self,target):
+        if target in self._targets:
+            self._targets.remove(target)
+
+    def connect(self,target):
+        self.addTarget(target)
+        target.addSource(self)
+
+    def disconnect(self,target):
+        self.delTarget(target)
+        target.delSource(self)
+
+    def disconnectAll(self):
+        for t in self._targets:
+            self.disconnect(t)
+
+    def __call__(self):
+        self.ugen()
+        return self._value
+
+    def __del__(self):
+        disconnectAll()
