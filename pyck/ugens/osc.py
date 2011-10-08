@@ -3,18 +3,18 @@ from math import sin,pi
 
 class Osc(UGen):
     
-    def __init__(self,server):
+    def __init__(self,server,freq=440.0,gain=1.0):
         UGen.__init__(self,server)
-        self._out = Outlet(self)
-        self._freq = 440.0
-        self._gain = 1.0
+        self._outlet = Outlet(self)
+        self._freq = freq
+        self._gain = gain
 
     def __delete__(self):
-        del self._out
+        del self._outlet
 
     @property
-    def out(self):
-        return self._out
+    def outlet(self):
+        return self._outlet
     
     @property
     def freq(self):
@@ -36,14 +36,14 @@ class Osc(UGen):
 class Sin(Osc):
     
     def __init__(self,server):
-        Osc.__init__(self,server)
-        self._angle = 0.0
+        Osc.__init__(self,server,angle=0.0)
+        self._angle = angle
 
     @property
     def angle(self):
         return self._angle
         
     def compute(self):
-        self._out.value = sin(self._angle)*self._gain
+        self._outlet.value = sin(self._angle)*self._gain
         self._angle += self._freq * 2 * pi / self.server.samplerate
         if self._angle > pi: self._angle -= 2*pi
