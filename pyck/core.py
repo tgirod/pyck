@@ -268,7 +268,7 @@ class Dac(UGen):
         return self._inlet
 
     def compute(self):
-        # transmit the signal to jack
+        # transmit the signal to jack. right now it only prints the results
         for i in self._inlet:
             i()
             print i.value, "\t",
