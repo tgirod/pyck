@@ -19,12 +19,14 @@ class Server(object):
         """turn a generator function into a shred and shredule it now"""
         self.shredule(self.now,func(*args))
     
-    def run(self):
-        while self.now < 20:
-            print "#", self.now
-            self.runShreds()
-            self.now += 1
+    def step(self):
+        self.runShreds()
+        self.now += 1
 
+    def run(self):
+        while True:
+            self.step()
+            
     def handleYield(self,s,y):
         if type(y) == int: self.shredule(self.now+y,s)
         # if yield returned none, reshredule s now
@@ -49,7 +51,7 @@ class Server(object):
 
 
 class Event(object):
-    """ The Event class allows cross shred communication. Example :
+    """ The Event class allows communication between various parts of code :
     
     def myShred(myEvent):
         #do something
@@ -87,3 +89,4 @@ class Event(object):
         for s in self.q:
             s.send(*args)
         self.shreds = []
+
