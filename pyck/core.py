@@ -43,7 +43,7 @@ class Server(object):
     def run(self):
         while True:
             self.step()
-            
+
     def handleYield(self,s,y):
         if type(y) == int: self.shredule(self._now+y,s)
         # if yield returned none, reshredule s now
@@ -271,5 +271,3 @@ class Dac(UGen):
         # transmit the signal to jack. right now it only prints the results
         for i in self._inlet:
             i()
-            print i.value, "\t",
-        print ""
