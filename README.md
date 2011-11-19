@@ -38,8 +38,8 @@ But python is slow ! what about sound synthesis ?
 Well, there are many ways to optimize python, such as :
 
  - writing parts directly in C using tools like [cython](http://cython.org)
- - running pyck with the excellent [pypy](http://pypy.org) interpreter using
- - [boost::python](http://www.boost.org/doc/libs/1_48_0/libs/python/doc/) to
- - write classes in C++ and expose them to python seamlessly
+ - running pyck with the excellent [pypy](http://pypy.org) interpreter
+ - using [boost::python](http://www.boost.org/doc/libs/1_48_0/libs/python/doc/)
+   to write classes in C++ and expose them to python seamlessly
 
 But right now, I prefer to focus on design rather than optimization.
