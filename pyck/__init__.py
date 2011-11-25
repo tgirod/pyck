@@ -1,1 +1,1 @@
-__all__ = ['core','ugens']
+__all__ = ['core']
