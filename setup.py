@@ -8,5 +8,4 @@ setup(name='pyck',
       author='Thomas Girod',
       author_email='girodt@gmail.com',
       url='https://github.com/jiyunatori/pyck',
-      packages=['pyck','pyck.shred','pyck.ugen']
-      )
+      packages=['pyck'])
