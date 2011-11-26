@@ -6,7 +6,7 @@ setup(name='pyck',
       version='0.1',
       description='Pythonized ChucK',
       author='Thomas Girod',
-      author_email='tomtom@herbesfolles.org',
+      author_email='girodt@gmail.com',
       url='https://github.com/jiyunatori/pyck',
-      packages=['pyck','pyck.ugens']
+      packages=['pyck','pyck.shred','pyck.ugen']
       )
