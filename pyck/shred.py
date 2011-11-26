@@ -9,11 +9,11 @@ class Shreduler(object):
     
     A generator's execution will stop when encountering yield (pause execution)
     or return (end shred). The shreduler handles what the shred returned and
-    reshredule if necessary.
+    reshredule as necessary.
 
-    A shred decided to reshredule itself now. So when the list of shreds has
-    been executed, the shreduler will check if there are no new shreds added at
-    the current time.
+    A shred might reshredule itself now. So when the list of shreds has been
+    consumed, the shreduler will check if there are new shreds added at the
+    current time.
     """
     
     def __init__(self):
