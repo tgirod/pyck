@@ -75,16 +75,11 @@ def disconnect(source,target):
 
 if __name__ == "__main__":
     now = 0
-    
+
     u1 = UGen(0,1)
     u2 = UGen(3,1)
     
     connect(u1,u2)
     
     u1.output[:] = 1
-
-    now = 1
     
-    u2.tick()
-    print u2.input
-
