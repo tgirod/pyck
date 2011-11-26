@@ -73,6 +73,17 @@ def disconnect(source,target):
     target.removeSource(source)
 
 
+
+class Dac(UGen):
+    def __init__(self,channels=2):
+        UGen.__init__(self,inputs=channels,outputs=0)
+
+
+class Adc(UGen):
+    def __init__(self,channels=2):
+        UGen.__init__(self,inputs=0,outpus=channels)
+
+
 if __name__ == "__main__":
     now = 0
 
