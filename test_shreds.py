@@ -1,5 +1,5 @@
 from random import randint
-from pyck.shred import *
+import pyck as p
     
 def delayShred(delay):
     while True:
@@ -18,16 +18,15 @@ def producerShred(event):
         event.signal(randint(0,10))
         yield 3
 
-config.now = 0
-config.shreduler = Shreduler()
+p.init()
 
-spork(delayShred,5)
-ev = Event()
+p.spork(delayShred,5)
+ev = p.Event()
 
-spork(producerShred,ev)
-spork(consumerShred,ev)
+p.spork(producerShred,ev)
+p.spork(consumerShred,ev)
 
 def tick():
-    print config.now, config.shreduler.queue
-    config.shreduler.tick()
-    config.now+=1
+    print p.now, p.shreduler.queue
+    p.shreduler.tick()
+    p.now+=1
