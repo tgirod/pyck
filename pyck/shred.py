@@ -1,3 +1,5 @@
+import config
+
 class Shreduler(object):
     """ In pyck, shreds are python generators.
     
@@ -41,13 +43,13 @@ class Shreduler(object):
                 y = shred.send(*args)
             
             # yield returns a duration : reshredule later
-            if type(y) == int: self.shredule(now+y,shred)
+            if type(y) == int: self.shredule(config.now+y,shred)
             
             # yield is an event object : make s wait for the event
             elif isinstance(y, Event): y.shredule(shred)
             
             # yield returns none : reshredule s now
-            elif y == None: self.shredule(now,shred)
+            elif y == None: self.shredule(config.now,shred)
             
             # yield is something else : invalid value
             else: pass
@@ -58,10 +60,9 @@ class Shreduler(object):
 
     def tick(self):
         """run what is shreduled for the current step"""
-        global now
         # get the list of shreds shreduled now
-        while now in self._queue:
-            for s in self._queue.pop(now,[]):
+        while config.now in self._queue:
+            for s in self._queue.pop(config.now,[]):
                 self.runShred(s)
 
 
@@ -90,10 +91,9 @@ class Event(object):
     
     def signal(self,*args):
         """send a message (args) to the first shred of the list and remove it"""
-        global shreduler
         try:
             shred = self._queue.pop(0)
-            shreduler.runShred(shred,*args)
+            config.shreduler.runShred(shred,*args)
         except IndexError:
             # no one is listening
             pass
@@ -110,45 +110,4 @@ class Event(object):
 
 def spork(func,*args):
     """turn a generator function into a shred and shredule it now"""
-    global now
-    global shreduler
-    shreduler.shredule(now,func(*args))
-
-
-if __name__ == "__main__":
-    from random import randint
-    
-    now = 0
-    shreduler = Shreduler()
-    
-    def delayShred(delay):
-        while True:
-            print "waiting for", delay
-            yield delay
-
-    spork(delayShred,5)
-
-    ev = Event()
-    
-    def consumerShred(event):
-        while True:
-            print "consumer: waiting for data"
-            data = yield event
-            print "consumer: received", data
-
-    def producerShred(event):
-        while True:
-            print "producer : sending data"
-            event.signal(randint(0,10))
-            yield 3
-
-    spork(producerShred,ev)
-    spork(consumerShred,ev)
-
-    def tick():
-        global now, shreduler
-        print now, shreduler.queue
-        shreduler.tick()
-        now+=1
-
-        
+    config.shreduler.shredule(config.now,func(*args))
