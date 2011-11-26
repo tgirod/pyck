@@ -18,7 +18,11 @@ class Shreduler(object):
     
     def __init__(self):
         self._queue = {}
-        
+
+    @property
+    def queue(self):
+        return self._queue
+    
     def shredule(self,time,shred):
         """ shredule the given shred at the given time """
         if time in self._queue:
@@ -140,3 +144,11 @@ if __name__ == "__main__":
 
     spork(producerShred,ev)
     spork(consumerShred,ev)
+
+    def tick():
+        global now, shreduler
+        print now, shreduler.queue
+        shreduler.tick()
+        now+=1
+
+        
