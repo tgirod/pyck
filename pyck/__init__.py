@@ -1,11 +1,8 @@
-__all__ = ['shred','ugen','config']
+from core import *
 
-import shred
-import ugen
-import config
+now = 0
+srate = 44100
+dac = None
+adc = None
+shreduler = None
 
-def init(inputs=2,outputs=2,srate=44100):
-    config.srate = srate
-    config.dac = ugen.Dac(outputs)
-    config.adc = ugen.Adc(inputs)
-    config.shreduler = shred.Shreduler()
