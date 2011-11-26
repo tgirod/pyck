@@ -1,5 +1,6 @@
 import numpy as np
 from weakref import WeakKeyDictionary
+import config
 
 class UGen(object):
     """ parent class of all ugens. Ugens should implement the following methods:
@@ -8,8 +9,7 @@ class UGen(object):
     """
     
     def __init__(self,inputs=1,outputs=1):
-        global now
-        self._last = now
+        self._last = config.now
         self._input = np.zeros(inputs,np.float32)
         self._output = np.zeros(outputs,np.float32)
         self._sources = WeakKeyDictionary()
@@ -33,8 +33,7 @@ class UGen(object):
         self._sources.pop(source,None)
         
     def tick(self):
-        global now
-        if self._last < now:
+        if self._last < config.now:
             self.fetch()
             self.compute()
             self._last += 1
@@ -81,7 +80,7 @@ class Dac(UGen):
 
 class Adc(UGen):
     def __init__(self,channels=2):
-        UGen.__init__(self,inputs=0,outpus=channels)
+        UGen.__init__(self,inputs=0,outputs=channels)
 
 
 if __name__ == "__main__":
