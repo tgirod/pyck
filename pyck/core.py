@@ -140,7 +140,7 @@ class UGen(object):
         self._input = np.zeros(inputs,np.float32)
         self._output = np.zeros(outputs,np.float32)
         self._sources = WeakKeyDictionary()
-        
+
     @property
     def last(self):
         return self._last
@@ -153,6 +153,10 @@ class UGen(object):
     def output(self):
         return self._output
 
+    @property
+    def sources(self):
+        return self._sources
+    
     def addSource(self,source,route):
         self._sources[source] = route
         
