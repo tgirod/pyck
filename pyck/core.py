@@ -1,5 +1,4 @@
 import pyck
-import numpy as np
 from weakref import WeakKeyDictionary
 
 class Shreduler(object):
@@ -137,8 +136,8 @@ class UGen(object):
     
     def __init__(self,inputs=1,outputs=1):
         self._last = pyck.now
-        self._input = np.zeros(inputs,np.float32)
-        self._output = np.zeros(outputs,np.float32)
+        self._input = [0.0 for _ in range(inputs)]
+        self._output = [0.0 for _ in range(outputs)]
         self._sources = WeakKeyDictionary()
 
     @property
@@ -171,10 +170,14 @@ class UGen(object):
     
     def fetch(self):
         """ call tick() on each source, and fetch results """
-        self._input[:] = 0
+        for i in range(len(self._input)):
+            self._input[i] = 0
         for source,route in self._sources.iteritems():
             source.tick()
-            self._input += np.dot(source._output, route)
+            for s,r in zip(source._output, route):
+                for i in range(len(r)):
+                    self._input[i] += s * r[i]
+
 
     def compute(self):
         """ 
@@ -188,12 +191,20 @@ class UGen(object):
 
 def connect(source,target,route=None):
     if route == None:
-        if source.output.size == target.input.size:
-            route = np.identity(source.output.size,np.bool)
-        elif source.output.size == 1:
-            route = np.ones((1,target.input.size),np.bool)
-        elif target.input.size == 1:
-            route = np.ones((source.output.size,1),np.bool)
+        s_len = len(source.output)
+        t_len = len(target.input)
+        
+        if s_len == t_len:
+            route = [ [0 for _ in range(t_len)] for _ in range(s_len)]
+            for i in range(s_len):
+                for j in range(t_len):
+                    if i == j:
+                        route[i][j] = 1
+
+        elif len(source.output) == 1:
+            route = [[1 for _ in range(t_len)]]
+        elif len(target.input) == 1:
+            route = [[1] for _ in range(s_len)]
         else:
             raise Exception('cannot guess a default route')
 
