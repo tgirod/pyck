@@ -14,6 +14,5 @@ def tick():
     pyck.now += 1
     pyck.dac.tick()
 
-for _ in xrange(100):
+for _ in xrange(pyck.srate*10):
     tick()
-    print pyck.dac.input
