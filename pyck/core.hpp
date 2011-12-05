@@ -46,8 +46,10 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     boost::shared_array<Sample> output;
     
     SourceList sources;
-    
+
+    UGen();
     UGen(int inputs, int outputs);
+    void init();
     ~UGen();
     
     Time getLast();
@@ -95,6 +97,7 @@ struct Route
     Route(int sourceSize, int targetSize);
     Route(UGenPtr source, UGenPtr target);
     Route(boost::python::list weights);
+    void init();
     ~Route();
     
     void fetch(UGenPtr source, UGenPtr target);

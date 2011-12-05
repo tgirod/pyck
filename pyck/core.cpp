@@ -4,16 +4,28 @@ using namespace boost;
 using namespace boost::python;
 using namespace std;
 
+UGen::UGen()
+{
+    this->inputSize = 1;
+    this->outputSize = 1;
+    init();
+}
+
 UGen::UGen(int inputs, int outputs)
+{
+    this->inputSize = inputs;
+    this->outputSize = outputs;
+    init();
+}
+
+void UGen::init()
 {
     this->last = Config::now;
     
-    this->inputSize = inputs;
-    this->input = shared_array<Sample>(new Sample[inputs]);
+    this->input = shared_array<Sample>(new Sample[inputSize]);
     resetInput();
-
-    this->outputSize = outputs;
-    this->output = shared_array<Sample>(new Sample[outputs]);
+    
+    this->output = shared_array<Sample>(new Sample[outputSize]);
     resetOutput();
 }
 
@@ -138,6 +150,32 @@ Route::Route(int sourceSize, int targetSize)
 {
     this->sourceSize = sourceSize;
     this->targetSize = targetSize;
+    init();
+}
+
+Route::Route(UGenPtr source, UGenPtr target)
+{
+    sourceSize = source->outputSize;
+    targetSize = target->inputSize;
+    init();
+}
+
+Route::Route(list weights)
+{
+    sourceSize = len(weights);
+    targetSize = len(weights[0]);
+    
+    this->weights = shared_array<int>(new int[sourceSize * targetSize]);
+    
+    for (int i=0; i<sourceSize; i++) {
+	for (int j=0; j<targetSize; j++) {
+	    this->weights[i*targetSize + j] = extract<int>(weights[i][j]);
+	}
+    }
+}
+
+void Route::init()
+{
     weights = shared_array<int>(new int[sourceSize * targetSize]);
     
     if (sourceSize == targetSize) {
@@ -152,25 +190,6 @@ Route::Route(int sourceSize, int targetSize)
 	// 1->n, n->1, n->n
 	for (int i=0; i<sourceSize*targetSize; i++) {
 	    weights[i] = 1;
-	}
-    }
-}
-
-Route::Route(UGenPtr source, UGenPtr target)
-{
-    sourceSize = source->outputSize;
-    targetSize = target->inputSize;
-    Route(sourceSize, targetSize);
-}
-
-Route::Route(list weights)
-{
-    sourceSize = len(weights);
-    targetSize = len(weights[0]); //len(list[0]);
-    this->weights = shared_array<int>(new int[sourceSize * targetSize]);
-    for (int i=0; i<sourceSize; i++) {
-	for (int j=0; j<targetSize; j++) {
-	    this->weights[i*targetSize + j] = extract<int>(weights[i][j]);
 	}
     }
 }
@@ -198,6 +217,7 @@ void initialize(int inputs, int outputs, Samplerate srate)
 BOOST_PYTHON_MODULE(_core)
 {
     class_<UGen, UGenPtr>("UGen", init<int,int>())
+	.def(init<>())
 	.def_readonly("inputSize",&UGen::inputSize)
 	.def_readonly("outputSize",&UGen::outputSize)
     	.def("input",&UGen::getInput)

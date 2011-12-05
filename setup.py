@@ -5,6 +5,7 @@ from distutils.core import setup, Extension
 pyck_core = Extension('pyck._core',
                       sources = ['pyck/core.cpp'],
                       libraries = ['boost_python'])
+                      #extra_compile_args = ['-std=c++0x'])
 
 setup(name='pyck',
       version='0.1',
