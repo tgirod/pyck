@@ -73,21 +73,6 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     void compute();
 };
 
-// global config
-
-struct Config
-{
-    static Time now;
-    static Samplerate srate;
-    static UGenPtr dac;
-    static UGenPtr adc;    
-    
-    static Time getNow() { return Config::now; }
-    static Samplerate getSrate() { return Config::srate; }
-    static UGenPtr getDac() { return Config::dac; }
-    static UGenPtr getAdc() { return Config::adc; }
-};
-
 struct Route
 {
     int sourceSize;
@@ -104,4 +89,23 @@ struct Route
 };
 
 
+// global config
+
+struct Config
+{
+    static Time now;
+    static Samplerate srate;
+    static UGenPtr dac;
+    static UGenPtr adc;    
+    
+    static void init(int inputs, int outputs, Samplerate srate);
+    
+    static Time getNow() { return Config::now; }
+    static Samplerate getSrate() { return Config::srate; }
+    static UGenPtr getDac() { return Config::dac; }
+    static UGenPtr getAdc() { return Config::adc; }
+    
+};
+
 void initialize(int inputs, int outputs, Samplerate srate);
+

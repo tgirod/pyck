@@ -137,13 +137,6 @@ void UGen::compute()
     // doing nothing, should be overridden in subclass
 }
 
-// Default config
-
-Time Config::now = 0;
-Samplerate Config::srate = 44100;
-UGenPtr Config::dac = UGenPtr(new UGen(1,0));
-UGenPtr Config::adc = UGenPtr(new UGen(0,1));
-
 // Route 
 
 Route::Route(int sourceSize, int targetSize)
@@ -206,12 +199,20 @@ void Route::fetch(UGenPtr source, UGenPtr target)
     }
 }
 
-void initialize(int inputs, int outputs, Samplerate srate)
+
+// Default config
+
+Time Config::now = 0;
+Samplerate Config::srate = 44100;
+UGenPtr Config::dac = UGenPtr(new UGen(1,0));
+UGenPtr Config::adc = UGenPtr(new UGen(0,1));
+
+void Config::init(int inputs, int outputs, Samplerate srate)
 {
     Config::now = 0;
     Config::srate = srate;
     Config::dac = UGenPtr(new UGen(inputs,0));
-    Config::adc = UGenPtr(new UGen(0,outputs));
+    Config::adc = UGenPtr(new UGen(0,outputs));    
 }
 
 BOOST_PYTHON_MODULE(_core)
@@ -231,18 +232,17 @@ BOOST_PYTHON_MODULE(_core)
 	.def("fetch",&UGen::fetch)
 	.def("compute",&UGen::compute);
     
-    // def("initialize",&initialize);
-    class_<Config, ConfigPtr>("Config")
-	.add_static_property("now",&Config::getNow)
-	.add_static_property("srate",&Config::getSrate)
-	.add_static_property("dac",&Config::getDac)
-	.add_static_property("adc",&Config::getAdc);
-
     class_<Route, RoutePtr>("Route", init<int, int>())
 	.def(init<UGenPtr, UGenPtr>())
 	.def(init<list>())
 	.def_readonly("sourceSize", &Route::sourceSize)
 	.def_readonly("targetSize", &Route::targetSize);
-    
-    def("initialize",&initialize);
+
+    class_<Config, ConfigPtr>("Config")
+	.add_static_property("now",&Config::getNow)
+	.add_static_property("srate",&Config::getSrate)
+	.add_static_property("dac",&Config::getDac)
+	.add_static_property("adc",&Config::getAdc)
+	.def("init",&Config::init)
+	.staticmethod("init");
 }
