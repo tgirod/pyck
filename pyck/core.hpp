@@ -1,39 +1,55 @@
 #include <map>
+#include <queue>
+#include <vector>
 #include <iostream>
 #include <string>
 
 #include <boost/python.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
-// BUGFIX for boost's weird behaviour when comparing weak_ptr
-template <typename T>
-struct SmartComparator
-{
-    bool operator()(boost::weak_ptr<T> const& lhs, boost::weak_ptr<T> const& rhs) {
-	boost::shared_ptr<T> shared_lhs = lhs.lock();
-	boost::shared_ptr<T> shared_rhs = rhs.lock();
-        return shared_lhs.get() < shared_rhs.get();
-    }
-};
-
+// structs
 struct UGen;
-typedef boost::shared_ptr<UGen> UGenPtr;
-
-struct Config;
-typedef boost::shared_ptr<Config> ConfigPtr;
-
 struct Route;
-typedef boost::shared_ptr<Route> RoutePtr;
+struct Config;
+struct Shreduler;
+struct Shred;
+struct Event;
 
+struct UGenComparator;
+struct ShredComparator;
+
+// shared pointers
+typedef boost::shared_ptr<UGen> UGenPtr;
+typedef boost::shared_ptr<Route> RoutePtr;
+typedef boost::shared_ptr<Config> ConfigPtr;
+typedef boost::shared_ptr<Shreduler> ShredulerPtr;
+typedef boost::shared_ptr<Shred> ShredPtr;
+typedef boost::shared_ptr<Event> EventPtr;
+
+// simple aliases
 typedef unsigned long int Time;
 typedef unsigned long int Duration;
 typedef float Sample;
 typedef unsigned long int Samplerate;
 
-typedef std::map< boost::weak_ptr<UGen>, RoutePtr, SmartComparator<UGen> > SourceList;
+// templatefull aliases
+typedef std::map< boost::weak_ptr<UGen>, RoutePtr, UGenComparator > SourceList;
+typedef std::priority_queue<ShredPtr, std::vector<ShredPtr>, ShredComparator> ShredQueue;
+
+// complete declarations
+
+struct UGenComparator
+{
+    bool operator()(boost::weak_ptr<UGen> const& lhs, boost::weak_ptr<UGen> const& rhs);
+};
+
+struct ShredComparator
+{
+    bool operator()(ShredPtr const& lhs, ShredPtr const& rhs);
+};
 
 struct UGen: public boost::enable_shared_from_this<UGen>
 {
@@ -73,7 +89,7 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     void compute();
 };
 
-struct Route
+struct Route: public boost::enable_shared_from_this<Route>
 {
     int sourceSize;
     int targetSize;
@@ -88,8 +104,43 @@ struct Route
     void fetch(UGenPtr source, UGenPtr target);
 };
 
+struct Shreduler: public boost::enable_shared_from_this<Shreduler>
+{
+    ShredQueue queue;
+    
+    Shreduler();
+    ~Shreduler();
+    
+    void spork(boost::python::object gen, boost::python::object args);
+    void addShred(ShredPtr shred);
+    void tick();
+};
 
-// global config
+struct Shred: public boost::enable_shared_from_this<Shred>
+{
+    boost::python::object gen; // call this (generator)
+    boost::python::object args; // with this arguments: gen.send(args)
+    Time time; // at this time
+    
+    Shred(boost::python::object gen, boost::python::object args, Time t);
+    Shred(boost::python::object gen, Time t);
+    Shred(boost::python::object gen, boost::python::object args);
+    ~Shred();
+    
+    void run();
+};
+
+// struct Event: public boost::enable_shared_from_this<Event>
+// {
+//     std::queue<boost::python::object> q;
+    
+//     Event();
+//     ~Event();
+    
+//     void shredule(boost::python::object gen);
+//     void signal(boost::python::object args);
+//     void broadcast(boost::python::object args);
+// };
 
 struct Config
 {
@@ -97,6 +148,7 @@ struct Config
     static Samplerate srate;
     static UGenPtr dac;
     static UGenPtr adc;    
+    static ShredulerPtr shreduler;
     
     static void init(int inputs, int outputs, Samplerate srate);
     
@@ -104,8 +156,5 @@ struct Config
     static Samplerate getSrate() { return Config::srate; }
     static UGenPtr getDac() { return Config::dac; }
     static UGenPtr getAdc() { return Config::adc; }
-    
+    static ShredulerPtr getShreduler() { return Config::shreduler; }
 };
-
-void initialize(int inputs, int outputs, Samplerate srate);
-

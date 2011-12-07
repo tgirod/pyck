@@ -1,4 +1,4 @@
-import pyck
+from pyck import Config
 from weakref import WeakKeyDictionary
 
 class Shreduler(object):
@@ -44,13 +44,13 @@ class Shreduler(object):
                 y = shred.send(*args)
             
             # yield returns a duration : reshredule later
-            if type(y) == int: self.shredule(pyck.now+y,shred)
+            if type(y) == int: self.shredule(Config.now+y,shred)
             
             # yield is an event object : make s wait for the event
             elif isinstance(y, Event): y.shredule(shred)
             
             # yield returns none : reshredule s now
-            elif y == None: self.shredule(pyck.now,shred)
+            elif y == None: self.shredule(Config.now,shred)
             
             # yield is something else : invalid value
             else: pass
@@ -62,8 +62,8 @@ class Shreduler(object):
     def tick(self):
         """run what is shreduled for the current step"""
         # get the list of shreds shreduled now
-        while pyck.now in self._queue:
-            for s in self._queue.pop(pyck.now,[]):
+        while Config.now in self._queue:
+            for s in self._queue.pop(Config.now,[]):
                 self.runShred(s)
 
 
@@ -94,7 +94,7 @@ class Event(object):
         """send a message (args) to the first shred of the list and remove it"""
         try:
             shred = self._queue.pop(0)
-            pyck.shreduler.runShred(shred,*args)
+            Config.shreduler.runShred(shred,*args)
         except IndexError:
             # no one is listening
             pass
@@ -111,10 +111,10 @@ class Event(object):
 
 def spork(func,*args):
     """turn a generator function into a shred and shredule it now"""
-    pyck.shreduler.shredule(pyck.now,func(*args))
+    Config.shreduler.shredule(Config.now,func(*args))
 
 def second(dur):
-    return dur * pyck.srate
+    return dur * Config.srate
 
 def minute(dur):
     return 60 * second(dur)
@@ -124,108 +124,3 @@ def hour(dur):
 
 def day(dur):
     return 24 * hour(dur)
-
-
-
-
-class UGen(object):
-    """ parent class of all ugens. Ugens should implement the following methods:
-    * compute, to do the actual computation
-    * __delete__ to destroy the inlets/outlets attached to the ugen
-    """
-    
-    def __init__(self,inputs=1,outputs=1):
-        self._last = pyck.now
-        self._input = [0.0 for _ in range(inputs)]
-        self._output = [0.0 for _ in range(outputs)]
-        self._sources = WeakKeyDictionary()
-
-    @property
-    def last(self):
-        return self._last
-
-    @property
-    def input(self):
-        return self._input
-    
-    @property
-    def output(self):
-        return self._output
-
-    @property
-    def sources(self):
-        return self._sources
-    
-    def addSource(self,source,route):
-        self._sources[source] = route
-        
-    def removeSource(self,source):
-        self._sources.pop(source,None)
-        
-    def tick(self):
-        if self._last < pyck.now:
-            self.fetch()
-            self.compute()
-            self._last += 1
-    
-    def fetch(self):
-        """ call tick() on each source, and fetch results """
-        for i in range(len(self._input)):
-            self._input[i] = 0
-        for source,route in self._sources.iteritems():
-            source.tick()
-            for s,r in zip(source._output, route):
-                for i in range(len(r)):
-                    self._input[i] += s * r[i]
-
-
-    def compute(self):
-        """ 
-        This method should be implemented in derived classes its purpose is to:
-        * call each inlet to get new values
-        * perform actual computation
-        * store the results in outlets
-        """
-        pass
-
-
-def connect(source,target,route=None):
-    if route == None:
-        s_len = len(source.output)
-        t_len = len(target.input)
-        
-        if s_len == t_len:
-            route = [ [0 for _ in range(t_len)] for _ in range(s_len)]
-            for i in range(s_len):
-                for j in range(t_len):
-                    if i == j:
-                        route[i][j] = 1
-
-        elif len(source.output) == 1:
-            route = [[1 for _ in range(t_len)]]
-        elif len(target.input) == 1:
-            route = [[1] for _ in range(s_len)]
-        else:
-            raise Exception('cannot guess a default route')
-
-    target.addSource(source,route)
-    
-def disconnect(source,target):
-    target.removeSource(source)
-
-
-
-class Dac(UGen):
-    def __init__(self,channels=2):
-        UGen.__init__(self,inputs=channels,outputs=0)
-
-
-class Adc(UGen):
-    def __init__(self,channels=2):
-        UGen.__init__(self,inputs=0,outputs=channels)
-
-def init(inputs=2,outputs=2,srate=44100):
-    pyck.srate = srate
-    pyck.dac = Dac(outputs)
-    pyck.adc = Adc(inputs)
-    pyck.shreduler = Shreduler()

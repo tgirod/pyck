@@ -4,6 +4,9 @@ using namespace boost;
 using namespace boost::python;
 using namespace std;
 
+// UGen class
+///////////////////////////////////////////////////////////////////////////////
+
 UGen::UGen()
 {
     this->inputSize = 1;
@@ -137,7 +140,8 @@ void UGen::compute()
     // doing nothing, should be overridden in subclass
 }
 
-// Route 
+// Route class
+///////////////////////////////////////////////////////////////////////////////
 
 Route::Route(int sourceSize, int targetSize)
 {
@@ -199,13 +203,145 @@ void Route::fetch(UGenPtr source, UGenPtr target)
     }
 }
 
+// Shreduler class
+///////////////////////////////////////////////////////////////////////////////
 
-// Default config
+Shreduler::Shreduler()
+{}
 
-Time Config::now = 0;
-Samplerate Config::srate = 44100;
-UGenPtr Config::dac = UGenPtr(new UGen(1,0));
-UGenPtr Config::adc = UGenPtr(new UGen(0,1));
+Shreduler::~Shreduler()
+{}
+
+void Shreduler::spork(boost::python::object gen, boost::python::object args)
+{
+    ShredPtr shred(new Shred(gen, args));
+    addShred(shred);
+}
+
+void Shreduler::addShred(ShredPtr shred)
+{
+    queue.push(shred);
+}
+
+void Shreduler::tick()
+{
+    Config::now++;
+    ShredPtr shred = queue.top();
+    while (!queue.empty() && shred->time < Config::now) {
+	queue.pop();
+	shred->run();
+	shred = queue.top();
+    }
+}
+
+// Shred class
+///////////////////////////////////////////////////////////////////////////////
+
+Shred::Shred(object gen, object args, Time t)
+{
+    this->time = t;
+    this->gen = gen;
+    this->args = args;
+}
+
+Shred::Shred(object gen, Time t)
+{
+    this->time = t;
+    this->gen = gen;
+    this->args = object();
+}
+
+Shred::Shred(object gen, object args)
+{
+    this->time = Config::now;
+    this->gen = gen;
+    this->args = args;
+}
+
+Shred::~Shred()
+{}
+
+void Shred::run()
+{
+    // resume the shred by sending args and store the value returned by yield
+    object yield = gen.attr("send")(args);
+    
+    // yielded nothing to reshredule now
+    if (yield.is_none()) {
+	time = Config::now;
+	Config::shreduler->addShred(shared_from_this());
+	return;
+    }
+    
+    // yielded a duration before next shreduling
+    extract<Duration> get_dur(yield);
+    if (get_dur.check()) {
+	time = Config::now + get_dur();
+	Config::shreduler->addShred(shared_from_this());
+	return;
+    }
+    
+    // FIXME : returned an Event object
+}
+
+// Event class
+///////////////////////////////////////////////////////////////////////////////
+
+
+// Event::Event()
+// {}
+
+// Event::~Event()
+// {}
+
+// void Event::shredule(object gen)
+// {
+//     q.push(gen);
+// }
+
+// void Event::signal(object args)
+// {
+//     // if at least a shred is waiting for this event get the first shred from
+//     // the queue and shredule it now
+
+//     if (q.empty()) {
+// 	return;
+//     }
+    
+//     object shred = q.front();
+//     q.pop();
+    
+//     Config::shreduler->runShred(shred, args);
+// }
+
+// void Event::broadcast(object args)
+// {
+//     object shred;
+//     while (!q.empty()) {
+// 	shred = q.front();
+// 	q.pop();
+// 	Config::shreduler->runShred(shred,args);
+//     }
+// }
+
+bool UGenComparator::operator()(weak_ptr<UGen> const& lhs, weak_ptr<UGen> const& rhs) {
+    UGenPtr shared_lhs = lhs.lock();
+    UGenPtr shared_rhs = rhs.lock();
+    return shared_lhs.get() < shared_rhs.get();
+}
+
+bool ShredComparator::operator()(ShredPtr const& lhs, ShredPtr const& rhs) {
+    return lhs->time > rhs->time;
+}
+
+// Config class
+///////////////////////////////////////////////////////////////////////////////
+
+Time		Config::now = 0;
+Samplerate	Config::srate = 44100;
+UGenPtr		Config::dac = UGenPtr(new UGen(1,0));
+UGenPtr		Config::adc = UGenPtr(new UGen(0,1));
+ShredulerPtr	Config::shreduler = ShredulerPtr(new Shreduler());
 
 void Config::init(int inputs, int outputs, Samplerate srate)
 {
@@ -214,6 +350,9 @@ void Config::init(int inputs, int outputs, Samplerate srate)
     Config::dac = UGenPtr(new UGen(inputs,0));
     Config::adc = UGenPtr(new UGen(0,outputs));    
 }
+
+// Boost python export
+///////////////////////////////////////////////////////////////////////////////
 
 BOOST_PYTHON_MODULE(_core)
 {
@@ -243,6 +382,12 @@ BOOST_PYTHON_MODULE(_core)
 	.add_static_property("srate",&Config::getSrate)
 	.add_static_property("dac",&Config::getDac)
 	.add_static_property("adc",&Config::getAdc)
+	.add_static_property("shreduler",&Config::getShreduler)
 	.def("init",&Config::init)
 	.staticmethod("init");
+    
+    class_<Shreduler, ShredulerPtr>("Shreduler")
+	.def("spork",&Shreduler::spork)
+	.def("tick",&Shreduler::tick);
+    
 }
