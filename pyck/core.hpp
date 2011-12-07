@@ -111,7 +111,7 @@ struct Shreduler: public boost::enable_shared_from_this<Shreduler>
     Shreduler();
     ~Shreduler();
     
-    void spork(boost::python::object gen, boost::python::object args);
+    void spork(boost::python::object gen);
     void addShred(ShredPtr shred);
     void tick();
 };
@@ -119,28 +119,28 @@ struct Shreduler: public boost::enable_shared_from_this<Shreduler>
 struct Shred: public boost::enable_shared_from_this<Shred>
 {
     boost::python::object gen; // call this (generator)
-    boost::python::object args; // with this arguments: gen.send(args)
     Time time; // at this time
     
-    Shred(boost::python::object gen, boost::python::object args, Time t);
     Shred(boost::python::object gen, Time t);
-    Shred(boost::python::object gen, boost::python::object args);
+    Shred(boost::python::object gen);
     ~Shred();
     
     void run();
+    void run(boost::python::object args);
+    void handleYield(boost::python::object yield);
 };
 
-// struct Event: public boost::enable_shared_from_this<Event>
-// {
-//     std::queue<boost::python::object> q;
+struct Event: public boost::enable_shared_from_this<Event>
+{
+    std::queue<ShredPtr> queue;
     
-//     Event();
-//     ~Event();
+    Event();
+    ~Event();
     
-//     void shredule(boost::python::object gen);
-//     void signal(boost::python::object args);
-//     void broadcast(boost::python::object args);
-// };
+    void addShred(ShredPtr shred);
+    void broadcast(boost::python::object args);
+    void signal(boost::python::object args);
+};
 
 struct Config
 {

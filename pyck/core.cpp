@@ -212,9 +212,9 @@ Shreduler::Shreduler()
 Shreduler::~Shreduler()
 {}
 
-void Shreduler::spork(boost::python::object gen, boost::python::object args)
+void Shreduler::spork(boost::python::object gen)
 {
-    ShredPtr shred(new Shred(gen, args));
+    ShredPtr shred(new Shred(gen));
     addShred(shred);
 }
 
@@ -225,37 +225,28 @@ void Shreduler::addShred(ShredPtr shred)
 
 void Shreduler::tick()
 {
-    Config::now++;
     ShredPtr shred = queue.top();
-    while (!queue.empty() && shred->time < Config::now) {
+    while (!queue.empty() && shred->time <= Config::now) {
 	queue.pop();
 	shred->run();
 	shred = queue.top();
     }
+    Config::now++;
 }
 
 // Shred class
 ///////////////////////////////////////////////////////////////////////////////
 
-Shred::Shred(object gen, object args, Time t)
-{
-    this->time = t;
-    this->gen = gen;
-    this->args = args;
-}
-
 Shred::Shred(object gen, Time t)
 {
     this->time = t;
     this->gen = gen;
-    this->args = object();
 }
 
-Shred::Shred(object gen, object args)
+Shred::Shred(object gen)
 {
     this->time = Config::now;
     this->gen = gen;
-    this->args = args;
 }
 
 Shred::~Shred()
@@ -263,66 +254,84 @@ Shred::~Shred()
 
 void Shred::run()
 {
-    // resume the shred by sending args and store the value returned by yield
+    // resume the shred and store the result sent by yield
+    object yield = gen.attr("next")();
+    handleYield(yield);
+}
+
+void Shred::run(object args)
+{
     object yield = gen.attr("send")(args);
-    
-    // yielded nothing to reshredule now
+    handleYield(yield);
+}
+
+void Shred::handleYield(object yield)
+{
+    // yield returned None -> reshredule now
     if (yield.is_none()) {
 	time = Config::now;
+	cout << "reshreduling now" << endl;
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
     
-    // yielded a duration before next shreduling
+    // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
 	time = Config::now + get_dur();
+	cout << "reshreduling at " << time << endl;
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
-    
-    // FIXME : returned an Event object
+
+    // yield returned an Event object -> reshredule in event queue
+    extract<EventPtr> get_event(yield);
+    if (get_event.check()) {
+	time = Config::now;
+	cout << "waiting for event" << endl;
+	get_event()->addShred(shared_from_this());
+	return;
+    }
 }
 
 // Event class
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// Event::Event()
-// {}
+Event::Event()
+{}
 
-// Event::~Event()
-// {}
+Event::~Event()
+{}
 
-// void Event::shredule(object gen)
-// {
-//     q.push(gen);
-// }
+void Event::addShred(ShredPtr shred)
+{
+    queue.push(shred);
+}
 
-// void Event::signal(object args)
-// {
-//     // if at least a shred is waiting for this event get the first shred from
-//     // the queue and shredule it now
+void Event::broadcast(object args)
+{
+    ShredPtr shred;
+    while (!queue.empty()) {
+	shred = queue.front();
+	queue.pop();
+	shred->run(args);
+    }
+}
 
-//     if (q.empty()) {
-// 	return;
-//     }
+void Event::signal(object args)
+{
+    // if at least a shred is waiting for this event get the first shred from
+    // the queue and shredule it now
     
-//     object shred = q.front();
-//     q.pop();
+    if (queue.empty()) {
+	return;
+    }
     
-//     Config::shreduler->runShred(shred, args);
-// }
-
-// void Event::broadcast(object args)
-// {
-//     object shred;
-//     while (!q.empty()) {
-// 	shred = q.front();
-// 	q.pop();
-// 	Config::shreduler->runShred(shred,args);
-//     }
-// }
+    ShredPtr shred = queue.front();
+    queue.pop();
+    shred->run(args);
+}
 
 bool UGenComparator::operator()(weak_ptr<UGen> const& lhs, weak_ptr<UGen> const& rhs) {
     UGenPtr shared_lhs = lhs.lock();
@@ -390,4 +399,7 @@ BOOST_PYTHON_MODULE(_core)
 	.def("spork",&Shreduler::spork)
 	.def("tick",&Shreduler::tick);
     
+    class_<Event, EventPtr>("Event")
+	.def("signal",&Event::signal)
+	.def("broadcast",&Event::broadcast);
 }
