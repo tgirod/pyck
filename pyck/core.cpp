@@ -311,11 +311,16 @@ void Event::addShred(ShredPtr shred)
 
 void Event::broadcast(object args)
 {
+    // wake up all shreds that are waiting for this event. if a shred finish by
+    // waiting for this event again, it will create an endless loop. that is
+    // why we add a counter so we wake up the shreds only once.
     ShredPtr shred;
-    while (!queue.empty()) {
+    int i = queue.size();
+    while (!queue.empty() && i > 0) {
 	shred = queue.front();
 	queue.pop();
 	shred->run(args);
+	i--;
     }
 }
 
