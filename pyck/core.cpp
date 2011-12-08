@@ -255,14 +255,24 @@ Shred::~Shred()
 void Shred::run()
 {
     // resume the shred and store the result sent by yield
-    object yield = gen.attr("next")();
-    handleYield(yield);
+    try {
+	object yield = gen.attr("next")();
+	handleYield(yield);
+    } catch (const error_already_set& e) {
+	// StopIteration error means the shred is finished, so we don't have to
+	// reshredule it later.
+    }
 }
 
 void Shred::run(object args)
 {
-    object yield = gen.attr("send")(args);
-    handleYield(yield);
+    try {
+	object yield = gen.attr("send")(args);
+	handleYield(yield);
+    } catch (const error_already_set& e) {
+	// StopIteration error means the shred is finished, so we don't have to
+	// reshredule it later.	
+    }
 }
 
 void Shred::handleYield(object yield)
@@ -270,7 +280,6 @@ void Shred::handleYield(object yield)
     // yield returned None -> reshredule now
     if (yield.is_none()) {
 	time = Config::now;
-	cout << "reshreduling now" << endl;
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
@@ -279,7 +288,6 @@ void Shred::handleYield(object yield)
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
 	time = Config::now + get_dur();
-	cout << "reshreduling at " << time << endl;
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
@@ -288,7 +296,6 @@ void Shred::handleYield(object yield)
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
 	time = Config::now;
-	cout << "waiting for event" << endl;
 	get_event()->addShred(shared_from_this());
 	return;
     }
@@ -296,7 +303,6 @@ void Shred::handleYield(object yield)
 
 // Event class
 ///////////////////////////////////////////////////////////////////////////////
-
 
 Event::Event()
 {}

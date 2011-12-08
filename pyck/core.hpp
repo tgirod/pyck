@@ -39,7 +39,7 @@ typedef unsigned long int Samplerate;
 typedef std::map< boost::weak_ptr<UGen>, RoutePtr, UGenComparator > SourceList;
 typedef std::priority_queue<ShredPtr, std::vector<ShredPtr>, ShredComparator> ShredQueue;
 
-// complete declarations
+// structs complete declarations
 
 struct UGenComparator
 {
