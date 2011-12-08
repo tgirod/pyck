@@ -227,7 +227,7 @@ void Shreduler::addShred(ShredPtr shred)
 void Shreduler::tick()
 {
     ShredPtr shred = queue.top();
-    while (!queue.empty() && shred->time <= Config::now) {
+    while (!queue.empty() && shred->next <= Config::now) {
 	queue.pop();
 	shred->run();
 	shred = queue.top();
@@ -240,13 +240,13 @@ void Shreduler::tick()
 
 Shred::Shred(object gen, Time t)
 {
-    this->time = t;
+    this->next = t;
     this->gen = gen;
 }
 
 Shred::Shred(object gen)
 {
-    this->time = Config::now;
+    this->next = Config::now;
     this->gen = gen;
 }
 
@@ -282,7 +282,7 @@ void Shred::handleYield(object yield)
 {
     // yield returned None -> reshredule now
     if (yield.is_none()) {
-	time = Config::now;
+	next = Config::now;
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
@@ -290,7 +290,7 @@ void Shred::handleYield(object yield)
     // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
-	time = Config::now + get_dur();
+	next = Config::now + get_dur();
 	Config::shreduler->addShred(shared_from_this());
 	return;
     }
@@ -298,7 +298,7 @@ void Shred::handleYield(object yield)
     // yield returned an Event object -> reshredule in event queue
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
-	time = Config::now;
+	next = Config::now;
 	get_event()->addShred(shared_from_this());
 	return;
     }
@@ -359,7 +359,7 @@ bool UGenComparator::operator()(weak_ptr<UGen> const& lhs, weak_ptr<UGen> const&
 }
 
 bool ShredComparator::operator()(ShredPtr const& lhs, ShredPtr const& rhs) {
-    return lhs->time > rhs->time;
+    return lhs->next > rhs->next;
 }
 
 // Config class
@@ -419,6 +419,7 @@ BOOST_PYTHON_MODULE(_core)
 	.def("tick",&Shreduler::tick);
     
     class_<Shred, ShredPtr>("Shred", no_init)
+	.def_readonly("next",&Shred::next)
 	.def("kill",&Shred::kill);
     
     class_<Event, EventPtr>("Event")

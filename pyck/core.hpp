@@ -119,7 +119,7 @@ struct Shreduler: public boost::enable_shared_from_this<Shreduler>
 struct Shred: public boost::enable_shared_from_this<Shred>
 {
     boost::python::object gen; // call this (generator)
-    Time time; // at this time
+    Time next; // at this time
     
     Shred(boost::python::object gen, Time t);
     Shred(boost::python::object gen);
