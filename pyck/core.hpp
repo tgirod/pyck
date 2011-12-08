@@ -1,3 +1,6 @@
+#ifndef CORE_HPP
+#define CORE_HPP
+
 #include <map>
 #include <queue>
 #include <vector>
@@ -159,3 +162,5 @@ struct Config
     static UGenPtr getAdc() { return Config::adc; }
     static ShredulerPtr getShreduler() { return Config::shreduler; }
 };
+
+#endif
