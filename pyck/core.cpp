@@ -212,10 +212,11 @@ Shreduler::Shreduler()
 Shreduler::~Shreduler()
 {}
 
-void Shreduler::spork(boost::python::object gen)
+ShredPtr Shreduler::spork(boost::python::object gen)
 {
     ShredPtr shred(new Shred(gen));
     addShred(shred);
+    return shred;
 }
 
 void Shreduler::addShred(ShredPtr shred)
@@ -250,7 +251,9 @@ Shred::Shred(object gen)
 }
 
 Shred::~Shred()
-{}
+{
+    kill();
+}
 
 void Shred::run()
 {
@@ -299,6 +302,11 @@ void Shred::handleYield(object yield)
 	get_event()->addShred(shared_from_this());
 	return;
     }
+}
+
+void Shred::kill()
+{
+    gen.attr("close")();
 }
 
 // Event class
@@ -409,6 +417,9 @@ BOOST_PYTHON_MODULE(_core)
     class_<Shreduler, ShredulerPtr>("Shreduler")
 	.def("spork",&Shreduler::spork)
 	.def("tick",&Shreduler::tick);
+    
+    class_<Shred, ShredPtr>("Shred", no_init)
+	.def("kill",&Shred::kill);
     
     class_<Event, EventPtr>("Event")
 	.def("signal",&Event::signal)

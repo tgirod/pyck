@@ -111,7 +111,7 @@ struct Shreduler: public boost::enable_shared_from_this<Shreduler>
     Shreduler();
     ~Shreduler();
     
-    void spork(boost::python::object gen);
+    ShredPtr spork(boost::python::object gen);
     void addShred(ShredPtr shred);
     void tick();
 };
@@ -128,6 +128,7 @@ struct Shred: public boost::enable_shared_from_this<Shred>
     void run();
     void run(boost::python::object args);
     void handleYield(boost::python::object yield);
+    void kill();
 };
 
 struct Event: public boost::enable_shared_from_this<Event>
