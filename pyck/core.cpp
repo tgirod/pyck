@@ -382,7 +382,7 @@ void Config::init(int inputs, int outputs, Samplerate srate)
 // Boost python export
 ///////////////////////////////////////////////////////////////////////////////
 
-BOOST_PYTHON_MODULE(_core)
+BOOST_PYTHON_MODULE(core_ext)
 {
     class_<UGen, UGenPtr>("UGen", init<int,int>())
 	.def(init<>())
