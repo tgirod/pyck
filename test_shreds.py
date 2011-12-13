@@ -1,6 +1,6 @@
 from random import randint
-import pyck as p
-    
+import pyck
+
 def delayShred(delay):
     while True:
         print "waiting for", delay
@@ -18,15 +18,11 @@ def producerShred(event):
         event.signal(randint(0,10))
         yield 3
 
-p.init()
 
-p.spork(delayShred,5)
-ev = p.Event()
 
-p.spork(producerShred,ev)
-p.spork(consumerShred,ev)
+pyck.spork(delayShred(5))
 
-def tick():
-    print p.now, p.shreduler.queue
-    p.shreduler.tick()
-    p.now+=1
+ev = pyck.Event()
+
+pyck.spork(producerShred(ev))
+pyck.spork(consumerShred(ev))
