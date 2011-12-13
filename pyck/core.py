@@ -28,6 +28,10 @@ class Shred(object):
         except StopIteration:
             # the shred ended, nothing to do
             return
+
+        except GeneratorExit:
+            # the shred has been killed
+            return
         
     def kill(self):
         self._gen.close()
@@ -120,7 +124,7 @@ class Event(object):
 def spork(gen):
     """turn a generator function into a shred and shredule it now"""
     shred = Shred(gen)
-    pyck.addShred(pyck.now,shred)
+    pyck.shreduler.addShred(pyck.now,shred)
     return shred
 
 def second(dur):
