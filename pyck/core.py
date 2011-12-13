@@ -44,7 +44,7 @@ class Shreduler(object):
                 y = shred.next()
             else:
                 y = shred.send(*args)
-            
+                
             # yield returns a duration : reshredule later
             if type(y) == int: self.shredule(pyck.now+y,shred)
             
@@ -67,7 +67,6 @@ class Shreduler(object):
         while pyck.now in self._queue:
             for s in self._queue.pop(pyck.now,[]):
                 self.runShred(s)
-        pyck.now += 1
 
 
 class Event(object):
@@ -112,9 +111,9 @@ class Event(object):
         self._queue = []
 
 
-def spork(func,*args):
+def spork(gen):
     """turn a generator function into a shred and shredule it now"""
-    pyck.shreduler.shredule(pyck.now,func(*args))
+    pyck.shreduler.shredule(pyck.now,gen)
 
 def second(dur):
     return dur * pyck.srate
