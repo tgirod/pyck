@@ -1,5 +1,7 @@
 import pyck
 from weakref import WeakKeyDictionary
+from itertools import repeat
+from array import array
 
 class Shreduler(object):
     """ In pyck, shreds are python generators.
@@ -21,7 +23,7 @@ class Shreduler(object):
     
     def __init__(self):
         self._queue = {}
-
+        
     @property
     def queue(self):
         return self._queue
@@ -136,8 +138,8 @@ class UGen(object):
     
     def __init__(self,inputs=1,outputs=1):
         self._last = pyck.now
-        self._input = [0.0 for _ in range(inputs)]
-        self._output = [0.0 for _ in range(outputs)]
+        self._input = array('f',repeat(0.0, inputs))
+        self._output = array('f',repeat(0.0, outputs))
         self._sources = WeakKeyDictionary()
 
     @property
@@ -156,7 +158,16 @@ class UGen(object):
     def sources(self):
         return self._sources
     
-    def addSource(self,source,route):
+    def addSource(self,source,route=None):
+        assert isinstance(source,UGen)
+        assert route == None or isinstance(route,Route)
+        
+        if route == None:
+            route = Route(source,self)
+            
+        assert len(source.output) == route.sourceSize
+        assert len(self.input) == route.targetSize
+        
         self._sources[source] = route
         
     def removeSource(self,source):
@@ -167,17 +178,15 @@ class UGen(object):
             self.fetch()
             self.compute()
             self._last += 1
-    
+
     def fetch(self):
-        """ call tick() on each source, and fetch results """
-        for i in range(len(self._input)):
-            self._input[i] = 0
+        """ clean input, call tick() on each source and fetch results """
+        for i,_ in enumerate(self._input):
+            self._input[i] = 0.0
+            
         for source,route in self._sources.iteritems():
             source.tick()
-            for s,r in zip(source._output, route):
-                for i in range(len(r)):
-                    self._input[i] += s * r[i]
-
+            route.fetch(source,self)
 
     def compute(self):
         """ 
@@ -188,32 +197,45 @@ class UGen(object):
         """
         pass
 
+class Route(object):
 
-def connect(source,target,route=None):
-    if route == None:
-        s_len = len(source.output)
-        t_len = len(target.input)
+    def __init__(self,source,target):
+        assert isinstance(source,UGen)
+        assert isinstance(target,UGen)
         
-        if s_len == t_len:
-            route = [ [0 for _ in range(t_len)] for _ in range(s_len)]
-            for i in range(s_len):
-                for j in range(t_len):
-                    if i == j:
-                        route[i][j] = 1
+        self._sourceSize = len(source._output)
+        self._targetSize = len(target._input)
+        
+        self._weights = array('f',repeat(0,self._sourceSize * self._targetSize))
+        self.initializeWeights()
 
-        elif len(source.output) == 1:
-            route = [[1 for _ in range(t_len)]]
-        elif len(target.input) == 1:
-            route = [[1] for _ in range(s_len)]
+    def initializeWeights(self):
+        if self._sourceSize == self._targetSize:
+            for w in range(self._sourceSize):
+                self._weights[w + w*self._targetSize] = 1.0
         else:
-            raise Exception('cannot guess a default route')
-
-    target.addSource(source,route)
+            for w in range(self._sourceSize * self._targetSize):
+                self._weights[w] = 1.0
     
-def disconnect(source,target):
-    target.removeSource(source)
+    def fetch(self,source,target):
+        assert len(source.output) == self._sourceSize
+        assert len(target.input) == self._targetSize
+        
+        for s in range(self._sourceSize):
+            for t in range(self._targetSize):
+                target.input[t] += source.output[s] * self._weights[t + s * self._targetSize]
+                
+    @property
+    def sourceSize(self):
+        return self._sourceSize
 
+    @property
+    def targetSize(self):
+        return self._targetSize
 
+    @property
+    def weights(self):
+        return self._weights
 
 class Dac(UGen):
     def __init__(self,channels=2):
@@ -223,9 +245,3 @@ class Dac(UGen):
 class Adc(UGen):
     def __init__(self,channels=2):
         UGen.__init__(self,inputs=0,outputs=channels)
-
-def init(inputs=2,outputs=2,srate=44100):
-    pyck.srate = srate
-    pyck.dac = Dac(outputs)
-    pyck.adc = Adc(inputs)
-    pyck.shreduler = Shreduler()
