@@ -3,6 +3,36 @@ from weakref import WeakKeyDictionary
 from itertools import repeat
 from array import array
 
+class Shred(object):
+    def __init__(self,gen):
+        self._gen = gen
+
+    def run(self,args=None):
+
+        try:
+            if args == None:
+                y = self._gen.next()
+            else:
+                y = self._gen.send(args)
+            
+            if y == None:
+                # re-shredule now
+                pyck.shreduler.addShred(pyck.now, self)
+            elif type(y) == int:
+                # re-shredule later
+                pyck.shreduler.addShred(pyck.now+y, self)
+            elif isinstance(y,Event):
+                # re-shredule in event queue
+                y.addShred(self)
+
+        except StopIteration:
+            # the shred ended, nothing to do
+            return
+        
+    def kill(self):
+        self._gen.close()
+
+
 class Shreduler(object):
     """ In pyck, shreds are python generators.
     
@@ -28,45 +58,19 @@ class Shreduler(object):
     def queue(self):
         return self._queue
     
-    def shredule(self,time,shred):
+    def addShred(self,time,shred):
         """ shredule the given shred at the given time """
         if time in self._queue:
             self._queue[time].append(shred)
         else:
             self._queue[time] = [shred]
 
-
-    def runShred(self,shred,*args):
-        """ run a shred and handle the yielded value """
-        try:
-            # run the shred
-            if args == ():
-                y = shred.next()
-            else:
-                y = shred.send(*args)
-                
-            # yield returns a duration : reshredule later
-            if type(y) == int: self.shredule(pyck.now+y,shred)
-            
-            # yield is an event object : make s wait for the event
-            elif isinstance(y, Event): y.shredule(shred)
-            
-            # yield returns none : reshredule s now
-            elif y == None: self.shredule(pyck.now,shred)
-            
-            # yield is something else : invalid value
-            else: pass
-            
-        except StopIteration:
-            # the shred ended, nothing to do
-            return
-
     def tick(self):
         """run what is shreduled for the current step"""
         # get the list of shreds shreduled now
         while pyck.now in self._queue:
             for s in self._queue.pop(pyck.now,[]):
-                self.runShred(s)
+                s.run()
 
 
 class Event(object):
@@ -87,16 +91,18 @@ class Event(object):
         # queue of shreds currently listening to this event
         self._queue = []
     
-    def shredule(self,shred):
+    def addShred(self,shred):
         """add s at the end of the list of shreds currently listening to this
         event"""
+        assert isinstance(shred,Shred)
+        
         self._queue.append(shred)
     
-    def signal(self,*args):
+    def signal(self,args):
         """send a message (args) to the first shred of the list and remove it"""
         try:
             shred = self._queue.pop(0)
-            pyck.shreduler.runShred(shred,*args)
+            shred.run(args)
         except IndexError:
             # no one is listening
             pass
@@ -107,13 +113,15 @@ class Event(object):
     def broadcast(self,*args):
         """send a message (args) to all the shreds listening and remove them"""
         for s in self._queue:
-            s.send(*args)
+            s.run(args)
         self._queue = []
 
 
 def spork(gen):
     """turn a generator function into a shred and shredule it now"""
-    pyck.shreduler.shredule(pyck.now,gen)
+    shred = Shred(gen)
+    pyck.addShred(pyck.now,shred)
+    return shred
 
 def second(dur):
     return dur * pyck.srate
