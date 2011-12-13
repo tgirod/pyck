@@ -1,19 +1,14 @@
 import pyck
 import pyck.ugens.osc as osc
-import pyck.ugens.filter as filter
 
-pyck.init()
+x = osc.SinOsc(gain=0.1)
+pyck.dac.addSource(x)
 
-o1 = osc.SinOsc(freq=30)
-o2 = osc.SinOsc(freq=33,gain=0.2)
+y = osc.SinOsc(freq=986)
+pyck.dac.addSource(y)
 
-pyck.connect(o1,pyck.dac)
-pyck.connect(o2,pyck.dac) 
-
-def tick():
-    pyck.now += 1
+for _ in range(1000):
+    pyck.shreduler.tick()
     pyck.dac.tick()
-
-for _ in range(pyck.srate*10):
-    tick()
+    print pyck.dac.input[0]
 

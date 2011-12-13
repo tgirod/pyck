@@ -67,6 +67,7 @@ class Shreduler(object):
         while pyck.now in self._queue:
             for s in self._queue.pop(pyck.now,[]):
                 self.runShred(s)
+        pyck.now += 1
 
 
 class Event(object):
