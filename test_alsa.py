@@ -3,6 +3,16 @@ import pyck.ugens.osc as osc
 from random import uniform
 import struct
 
+"""
+To get some sound out of pyck :
+
+$> mkfifo fifo
+
+$> cat fifo | aplay
+
+and then launch this script from another terminal.
+"""
+
 pyck.srate = 8000
 
 x = osc.SinOsc(freq=1000)
