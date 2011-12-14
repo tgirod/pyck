@@ -127,18 +127,20 @@ def spork(gen):
     pyck.shreduler.addShred(pyck.now,shred)
     return shred
 
+def ms(dur):
+    return int(dur * pyck.srate / 1000)
+
 def second(dur):
-    return dur * pyck.srate
+    return int(dur * pyck.srate)
 
 def minute(dur):
-    return 60 * second(dur)
+    return int(60 * dur * pyck.srate)
 
 def hour(dur):
-    return 60 * minute(dur)
+    return int(3600 * dur * pyck.srate)
 
 def day(dur):
-    return 24 * hour(dur)
-
+    return int(86400 * dur * pyck.srate)
 
 
 
