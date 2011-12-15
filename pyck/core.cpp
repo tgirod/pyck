@@ -23,7 +23,7 @@ UGen::UGen(int inputs, int outputs)
 
 void UGen::init()
 {
-    this->last = Config::now;
+    this->last = 0; //this->last = Config::now;
     
     this->input = shared_array<Sample>(new Sample[inputSize]);
     resetInput();
@@ -108,11 +108,11 @@ void UGen::removeSource(UGenPtr source)
 
 void UGen::tick()
 {
-    if (this->last < Config::now) {
+    //if (this->last < Config::now) {
 	this->fetch();
 	this->compute();
 	this->last += 1;
-    }
+	//}
 }
 
 void UGen::fetch()
@@ -232,7 +232,6 @@ void Shreduler::tick()
 	shred->run();
 	shred = queue.top();
     }
-    Config::now++;
 }
 
 // Shred class
@@ -382,47 +381,47 @@ void Config::init(int inputs, int outputs, Samplerate srate)
 // Boost python export
 ///////////////////////////////////////////////////////////////////////////////
 
-BOOST_PYTHON_MODULE(core_ext)
+BOOST_PYTHON_MODULE(libcore)
 {
     class_<UGen, UGenPtr>("UGen", init<int,int>())
-	.def(init<>())
-	.def_readonly("inputSize",&UGen::inputSize)
-	.def_readonly("outputSize",&UGen::outputSize)
+    	.def(init<>())
+    	.def_readonly("inputSize",&UGen::inputSize)
+    	.def_readonly("outputSize",&UGen::outputSize)
     	.def("input",&UGen::getInput)
-	.def("setInput",&UGen::setInput)
+    	.def("setInput",&UGen::setInput)
     	.def("output",&UGen::getOutput)
-	.def("setOutput",&UGen::setOutput)
+    	.def("setOutput",&UGen::setOutput)
     	.def("addSource",&UGen::addSourceGuess)
-	.def("addSource",&UGen::addSource)
+    	.def("addSource",&UGen::addSource)
     	.def("removeSource",&UGen::removeSource)
-	.def("tick", &UGen::tick)
-	.def("fetch",&UGen::fetch)
-	.def("compute",&UGen::compute);
+    	.def("tick", &UGen::tick)
+    	.def("fetch",&UGen::fetch)
+    	.def("compute",&UGen::compute);
     
     class_<Route, RoutePtr>("Route", init<int, int>())
-	.def(init<UGenPtr, UGenPtr>())
-	.def(init<list>())
-	.def_readonly("sourceSize", &Route::sourceSize)
-	.def_readonly("targetSize", &Route::targetSize);
+    	.def(init<UGenPtr, UGenPtr>())
+    	.def(init<list>())
+    	.def_readonly("sourceSize", &Route::sourceSize)
+    	.def_readonly("targetSize", &Route::targetSize);
 
-    class_<Config, ConfigPtr>("Config")
-	.add_static_property("now",&Config::getNow)
-	.add_static_property("srate",&Config::getSrate)
-	.add_static_property("dac",&Config::getDac)
-	.add_static_property("adc",&Config::getAdc)
-	.add_static_property("shreduler",&Config::getShreduler)
-	.def("init",&Config::init)
-	.staticmethod("init");
-    
     class_<Shreduler, ShredulerPtr>("Shreduler")
-	.def("spork",&Shreduler::spork)
-	.def("tick",&Shreduler::tick);
+    	.def("spork",&Shreduler::spork)
+    	.def("tick",&Shreduler::tick);
     
     class_<Shred, ShredPtr>("Shred", no_init)
-	.def_readonly("next",&Shred::next)
-	.def("kill",&Shred::kill);
+    	.def_readonly("next",&Shred::next)
+    	.def("kill",&Shred::kill);
     
     class_<Event, EventPtr>("Event")
-	.def("signal",&Event::signal)
-	.def("broadcast",&Event::broadcast);
+    	.def("signal",&Event::signal)
+    	.def("broadcast",&Event::broadcast);
+
+    class_<Config, ConfigPtr>("Config")
+    	.add_static_property("now",&Config::getNow)
+    	.add_static_property("srate",&Config::getSrate)
+    	.add_static_property("dac",&Config::getDac)
+    	.add_static_property("adc",&Config::getAdc)
+    	.add_static_property("shreduler",&Config::getShreduler)
+    	.def("init",&Config::init)
+    	.staticmethod("init");
 }
