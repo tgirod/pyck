@@ -3,6 +3,22 @@ pyck -- python chuck
 Pyck is an implementation of ChucK's strongly timed approach to audio
 programming. At the present time, it is a proof-of-concept.
 
+News
+----
+
+**2011.12.14**
+
+Finally, some noise is coming out of PycK ! As I don't have an audio interface
+coded, I did it by piping the samples to aplay - and it worked ! But before I
+go any further down the audio interface road, there is a lot of optimization to
+do.
+
+**2011.12.12**
+
+I got bored of the boost::python branch. All this compiling and linking between
+modules is such a mess, I'm getting back to pure python for now. I'll probably
+have a shot at cython and see where it gets me.
+
 Why doing this ?
 ----------------
 
