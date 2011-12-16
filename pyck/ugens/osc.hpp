@@ -16,7 +16,7 @@ struct SinOsc;
 typedef boost::shared_ptr<Osc> OscPtr;
 typedef boost::shared_ptr<SinOsc> SinOscPtr;
 
-struct Osc : UGen, public boost::enable_shared_from_this<Osc>
+struct Osc : UGen
 {
     float freq;
     float phase;
@@ -36,7 +36,7 @@ struct Osc : UGen, public boost::enable_shared_from_this<Osc>
     
 };
 
-struct SinOsc : Osc, public boost::enable_shared_from_this<SinOsc>
+struct SinOsc : Osc
 {
     float y[3]; // previous values
     float w; // angular speed in radians/sample
