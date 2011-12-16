@@ -43,7 +43,6 @@ typedef std::map< boost::weak_ptr<UGen>, RoutePtr, UGenComparator > SourceList;
 typedef std::priority_queue<ShredPtr, std::vector<ShredPtr>, ShredComparator> ShredQueue;
 
 // structs complete declarations
-
 struct UGenComparator
 {
     bool operator()(boost::weak_ptr<UGen> const& lhs, boost::weak_ptr<UGen> const& rhs);
@@ -88,8 +87,8 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     void removeSource(UGenPtr source);
     
     void tick();
-    void fetch();
-    void compute();
+    virtual void fetch();
+    virtual void compute();
 };
 
 struct Route: public boost::enable_shared_from_this<Route>
@@ -155,6 +154,7 @@ struct Config
     static ShredulerPtr shreduler;
     
     static void init(int inputs, int outputs, Samplerate srate);
+    static void tick();
     
     static Time getNow() { return Config::now; }
     static Samplerate getSrate() { return Config::srate; }

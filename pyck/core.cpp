@@ -23,7 +23,7 @@ UGen::UGen(int inputs, int outputs)
 
 void UGen::init()
 {
-    this->last = 0; //this->last = Config::now;
+    this->last = Config::now;
     
     this->input = shared_array<Sample>(new Sample[inputSize]);
     resetInput();
@@ -108,11 +108,11 @@ void UGen::removeSource(UGenPtr source)
 
 void UGen::tick()
 {
-    //if (this->last < Config::now) {
+    if (this->last < Config::now) {
 	this->fetch();
 	this->compute();
-	this->last += 1;
-	//}
+	this->last++;
+    }
 }
 
 void UGen::fetch()
@@ -226,11 +226,13 @@ void Shreduler::addShred(ShredPtr shred)
 
 void Shreduler::tick()
 {
-    ShredPtr shred = queue.top();
-    while (!queue.empty() && shred->next <= Config::now) {
-	queue.pop();
-	shred->run();
-	shred = queue.top();
+    if (!queue.empty()) {
+	ShredPtr shred = queue.top();
+	while (!queue.empty() && shred->next <= Config::now) {
+	    queue.pop();
+	    shred->run();
+	    shred = queue.top();
+	}
     }
 }
 
@@ -378,6 +380,13 @@ void Config::init(int inputs, int outputs, Samplerate srate)
     Config::adc = UGenPtr(new UGen(0,outputs));    
 }
 
+void Config::tick()
+{
+    Config::shreduler->tick();
+    Config::dac->tick();
+    Config::now++;
+}
+
 // Boost python export
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -423,5 +432,7 @@ BOOST_PYTHON_MODULE(libcore)
     	.add_static_property("adc",&Config::getAdc)
     	.add_static_property("shreduler",&Config::getShreduler)
     	.def("init",&Config::init)
-    	.staticmethod("init");
+    	.staticmethod("init")
+	.def("tick",&Config::tick)
+	.staticmethod("tick");
 }
