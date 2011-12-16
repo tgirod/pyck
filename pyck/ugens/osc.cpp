@@ -82,7 +82,7 @@ void SinOsc::setPhase(float phase)
 
 void SinOsc::update()
 {
-    w = freq * 2 * M_PI / Config::srate;
+    w = freq * 2 * M_PI / Server::srate;
     p = 2 * cos(w);
     y[0] = sin(-2 * w + phase);
     y[1] = sin(-1 * w + phase);

@@ -16,7 +16,7 @@
 // structs
 struct UGen;
 struct Route;
-struct Config;
+struct Server;
 struct Shreduler;
 struct Shred;
 struct Event;
@@ -27,7 +27,7 @@ struct ShredComparator;
 // shared pointers
 typedef boost::shared_ptr<UGen> UGenPtr;
 typedef boost::shared_ptr<Route> RoutePtr;
-typedef boost::shared_ptr<Config> ConfigPtr;
+typedef boost::shared_ptr<Server> ServerPtr;
 typedef boost::shared_ptr<Shreduler> ShredulerPtr;
 typedef boost::shared_ptr<Shred> ShredPtr;
 typedef boost::shared_ptr<Event> EventPtr;
@@ -145,7 +145,7 @@ struct Event: public boost::enable_shared_from_this<Event>
     void signal(boost::python::object args);
 };
 
-struct Config
+struct Server
 {
     static Time now;
     static Samplerate srate;
@@ -156,11 +156,11 @@ struct Config
     static void init(int inputs, int outputs, Samplerate srate);
     static void tick();
     
-    static Time getNow() { return Config::now; }
-    static Samplerate getSrate() { return Config::srate; }
-    static UGenPtr getDac() { return Config::dac; }
-    static UGenPtr getAdc() { return Config::adc; }
-    static ShredulerPtr getShreduler() { return Config::shreduler; }
+    static Time getNow() { return Server::now; }
+    static Samplerate getSrate() { return Server::srate; }
+    static UGenPtr getDac() { return Server::dac; }
+    static UGenPtr getAdc() { return Server::adc; }
+    static ShredulerPtr getShreduler() { return Server::shreduler; }
 };
 
 #endif

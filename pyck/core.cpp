@@ -23,7 +23,7 @@ UGen::UGen(int inputs, int outputs)
 
 void UGen::init()
 {
-    this->last = Config::now;
+    this->last = Server::now;
     
     this->input = shared_array<Sample>(new Sample[inputSize]);
     resetInput();
@@ -108,7 +108,7 @@ void UGen::removeSource(UGenPtr source)
 
 void UGen::tick()
 {
-    if (this->last < Config::now) {
+    if (this->last < Server::now) {
 	this->fetch();
 	this->compute();
 	this->last++;
@@ -228,7 +228,7 @@ void Shreduler::tick()
 {
     if (!queue.empty()) {
 	ShredPtr shred = queue.top();
-	while (!queue.empty() && shred->next <= Config::now) {
+	while (!queue.empty() && shred->next <= Server::now) {
 	    queue.pop();
 	    shred->run();
 	    shred = queue.top();
@@ -247,7 +247,7 @@ Shred::Shred(object gen, Time t)
 
 Shred::Shred(object gen)
 {
-    this->next = Config::now;
+    this->next = Server::now;
     this->gen = gen;
 }
 
@@ -283,23 +283,23 @@ void Shred::handleYield(object yield)
 {
     // yield returned None -> reshredule now
     if (yield.is_none()) {
-	next = Config::now;
-	Config::shreduler->addShred(shared_from_this());
+	next = Server::now;
+	Server::shreduler->addShred(shared_from_this());
 	return;
     }
     
     // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
-	next = Config::now + get_dur();
-	Config::shreduler->addShred(shared_from_this());
+	next = Server::now + get_dur();
+	Server::shreduler->addShred(shared_from_this());
 	return;
     }
 
     // yield returned an Event object -> reshredule in event queue
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
-	next = Config::now;
+	next = Server::now;
 	get_event()->addShred(shared_from_this());
 	return;
     }
@@ -363,28 +363,28 @@ bool ShredComparator::operator()(ShredPtr const& lhs, ShredPtr const& rhs) {
     return lhs->next > rhs->next;
 }
 
-// Config class
+// Server class
 ///////////////////////////////////////////////////////////////////////////////
 
-Time		Config::now = 0;
-Samplerate	Config::srate = 44100;
-UGenPtr		Config::dac = UGenPtr(new UGen(1,0));
-UGenPtr		Config::adc = UGenPtr(new UGen(0,1));
-ShredulerPtr	Config::shreduler = ShredulerPtr(new Shreduler());
+Time		Server::now = 0;
+Samplerate	Server::srate = 44100;
+UGenPtr		Server::dac = UGenPtr(new UGen(1,0));
+UGenPtr		Server::adc = UGenPtr(new UGen(0,1));
+ShredulerPtr	Server::shreduler = ShredulerPtr(new Shreduler());
 
-void Config::init(int inputs, int outputs, Samplerate srate)
+void Server::init(int inputs, int outputs, Samplerate srate)
 {
-    Config::now = 0;
-    Config::srate = srate;
-    Config::dac = UGenPtr(new UGen(inputs,0));
-    Config::adc = UGenPtr(new UGen(0,outputs));    
+    Server::now = 0;
+    Server::srate = srate;
+    Server::dac = UGenPtr(new UGen(inputs,0));
+    Server::adc = UGenPtr(new UGen(0,outputs));    
 }
 
-void Config::tick()
+void Server::tick()
 {
-    Config::shreduler->tick();
-    Config::dac->tick();
-    Config::now++;
+    Server::shreduler->tick();
+    Server::dac->tick();
+    Server::now++;
 }
 
 // Boost python export
@@ -425,14 +425,14 @@ BOOST_PYTHON_MODULE(libcore)
     	.def("signal",&Event::signal)
     	.def("broadcast",&Event::broadcast);
 
-    class_<Config, ConfigPtr>("Config")
-    	.add_static_property("now",&Config::getNow)
-    	.add_static_property("srate",&Config::getSrate)
-    	.add_static_property("dac",&Config::getDac)
-    	.add_static_property("adc",&Config::getAdc)
-    	.add_static_property("shreduler",&Config::getShreduler)
-    	.def("init",&Config::init)
+    class_<Server, ServerPtr>("Server")
+    	.add_static_property("now",&Server::getNow)
+    	.add_static_property("srate",&Server::getSrate)
+    	.add_static_property("dac",&Server::getDac)
+    	.add_static_property("adc",&Server::getAdc)
+    	.add_static_property("shreduler",&Server::getShreduler)
+    	.def("init",&Server::init)
     	.staticmethod("init")
-	.def("tick",&Config::tick)
+	.def("tick",&Server::tick)
 	.staticmethod("tick");
 }
