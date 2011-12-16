@@ -114,9 +114,9 @@ void UGen::removeSource(UGenPtr source)
 void UGen::tick()
 {
     if (this->last < Server::singleton->now) {
+	this->last = Server::singleton->now;
 	this->fetch();
 	this->compute();
-	this->last++;
     }
 }
 
@@ -378,8 +378,7 @@ Server::Server(int inputs, int outputs, Samplerate srate)
 {
     this->now = 0;
     this->srate = srate;
-    this->dac = UGenPtr(new UGen(outputs,0));
-    this->adc = UGenPtr(new UGen(0,inputs));
+    this->io = UGenPtr(new UGen(outputs,inputs));
     this->shreduler = ShredulerPtr(new Shreduler());
 }
 
@@ -410,8 +409,7 @@ void Server::end()
 void Server::tick()
 {
     shreduler->tick();
-    adc->tick();
-    dac->tick();
+    io->tick();
     now++;
 }
 
@@ -425,14 +423,9 @@ Samplerate Server::getSrate()
     return srate; 
 }
 
-UGenPtr Server::getDac()
+UGenPtr Server::getIO()
 { 
-    return dac;
-}
-
-UGenPtr Server::getAdc() 
-{ 
-    return adc; 
+    return io;
 }
 
 ShredulerPtr Server::getShreduler() 
@@ -481,8 +474,8 @@ BOOST_PYTHON_MODULE(libcore)
     class_<Server, ServerPtr>("Server", no_init)
     	.add_property("now",&Server::getNow)
     	.add_property("srate",&Server::getSrate)
-    	.add_property("dac",&Server::getDac)
-    	.add_property("adc",&Server::getAdc)
+    	.add_property("dac",&Server::getIO)
+    	.add_property("adc",&Server::getIO)
     	.add_property("shreduler",&Server::getShreduler)
 	.def("tick",&Server::tick)
 	.def("start",&Server::start)

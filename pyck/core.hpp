@@ -83,10 +83,10 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     void addSource(UGenPtr source, RoutePtr route);
     void addSourceList(UGenPtr source, boost::python::list route);
     void addSourceGuess(UGenPtr source);
-
+    
     void removeSource(UGenPtr source);
     
-    void tick();
+    virtual void tick();
     virtual void fetch();
     virtual void compute();
 };
@@ -151,22 +151,20 @@ struct Server
     
     Time now;
     Samplerate srate;
-    UGenPtr dac;
-    UGenPtr adc;    
+    UGenPtr io;
     ShredulerPtr shreduler;
     
     Server(int inputs, int outputs, Samplerate srate);
     ~Server();
     
-    static ServerPtr start(int inputs, int outputs, Samplerate srate);
-    static void end();
+    static virtual ServerPtr start(int inputs, int outputs, Samplerate srate);
+    static virtual void end();
     
     void tick();
     
     Time getNow();
     Samplerate getSrate();
-    UGenPtr getDac();
-    UGenPtr getAdc();
+    UGenPtr getIO();
     ShredulerPtr getShreduler();
 };
 
