@@ -147,20 +147,27 @@ struct Event: public boost::enable_shared_from_this<Event>
 
 struct Server
 {
-    static Time now;
-    static Samplerate srate;
-    static UGenPtr dac;
-    static UGenPtr adc;    
-    static ShredulerPtr shreduler;
+    static ServerPtr singleton;
     
-    static void init(int inputs, int outputs, Samplerate srate);
-    static void tick();
+    Time now;
+    Samplerate srate;
+    UGenPtr dac;
+    UGenPtr adc;    
+    ShredulerPtr shreduler;
     
-    static Time getNow() { return Server::now; }
-    static Samplerate getSrate() { return Server::srate; }
-    static UGenPtr getDac() { return Server::dac; }
-    static UGenPtr getAdc() { return Server::adc; }
-    static ShredulerPtr getShreduler() { return Server::shreduler; }
+    Server(int inputs, int outputs, Samplerate srate);
+    ~Server();
+    
+    static ServerPtr start(int inputs, int outputs, Samplerate srate);
+    static void end();
+    
+    void tick();
+    
+    Time getNow();
+    Samplerate getSrate();
+    UGenPtr getDac();
+    UGenPtr getAdc();
+    ShredulerPtr getShreduler();
 };
 
 #endif

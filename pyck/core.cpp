@@ -23,7 +23,12 @@ UGen::UGen(int inputs, int outputs)
 
 void UGen::init()
 {
-    this->last = Server::now;
+    // special case if the server is not yet started
+    if (Server::singleton) {
+	this->last = Server::singleton->now;
+    } else {
+	this->last = 0;
+    }
     
     this->input = shared_array<Sample>(new Sample[inputSize]);
     resetInput();
@@ -108,7 +113,7 @@ void UGen::removeSource(UGenPtr source)
 
 void UGen::tick()
 {
-    if (this->last < Server::now) {
+    if (this->last < Server::singleton->now) {
 	this->fetch();
 	this->compute();
 	this->last++;
@@ -228,7 +233,7 @@ void Shreduler::tick()
 {
     if (!queue.empty()) {
 	ShredPtr shred = queue.top();
-	while (!queue.empty() && shred->next <= Server::now) {
+	while (!queue.empty() && shred->next <= Server::singleton->now) {
 	    queue.pop();
 	    shred->run();
 	    shred = queue.top();
@@ -247,7 +252,7 @@ Shred::Shred(object gen, Time t)
 
 Shred::Shred(object gen)
 {
-    this->next = Server::now;
+    this->next = Server::singleton->now;
     this->gen = gen;
 }
 
@@ -281,25 +286,26 @@ void Shred::run(object args)
 
 void Shred::handleYield(object yield)
 {
+    ServerPtr s = Server::singleton;
     // yield returned None -> reshredule now
     if (yield.is_none()) {
-	next = Server::now;
-	Server::shreduler->addShred(shared_from_this());
+	next = s->now;
+	s->shreduler->addShred(shared_from_this());
 	return;
     }
     
     // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
-	next = Server::now + get_dur();
-	Server::shreduler->addShred(shared_from_this());
+	next = s->now + get_dur();
+	s->shreduler->addShred(shared_from_this());
 	return;
     }
 
     // yield returned an Event object -> reshredule in event queue
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
-	next = Server::now;
+	next = s->now;
 	get_event()->addShred(shared_from_this());
 	return;
     }
@@ -366,25 +372,72 @@ bool ShredComparator::operator()(ShredPtr const& lhs, ShredPtr const& rhs) {
 // Server class
 ///////////////////////////////////////////////////////////////////////////////
 
-Time		Server::now = 0;
-Samplerate	Server::srate = 44100;
-UGenPtr		Server::dac = UGenPtr(new UGen(1,0));
-UGenPtr		Server::adc = UGenPtr(new UGen(0,1));
-ShredulerPtr	Server::shreduler = ShredulerPtr(new Shreduler());
+ServerPtr Server::singleton = ServerPtr();
 
-void Server::init(int inputs, int outputs, Samplerate srate)
+Server::Server(int inputs, int outputs, Samplerate srate)
 {
-    Server::now = 0;
-    Server::srate = srate;
-    Server::dac = UGenPtr(new UGen(inputs,0));
-    Server::adc = UGenPtr(new UGen(0,outputs));    
+    this->now = 0;
+    this->srate = srate;
+    this->dac = UGenPtr(new UGen(outputs,0));
+    this->adc = UGenPtr(new UGen(0,inputs));
+    this->shreduler = ShredulerPtr(new Shreduler());
+}
+
+Server::~Server()
+{}
+
+ServerPtr Server::start(int inputs, int outputs, Samplerate srate)
+{
+    if (Server::singleton) {
+	cerr << "server already started" << endl;
+    } else {
+	ServerPtr s(new Server(inputs, outputs, srate));
+	Server::singleton = s;
+    }
+    return Server::singleton;
+}
+
+void Server::end()
+{
+    if (Server::singleton) {
+	cout << "ending server" << endl;
+	Server::singleton.reset();
+    } else {
+	cerr << "no server running" << endl;
+    }
 }
 
 void Server::tick()
 {
-    Server::shreduler->tick();
-    Server::dac->tick();
-    Server::now++;
+    shreduler->tick();
+    adc->tick();
+    dac->tick();
+    now++;
+}
+
+Time Server::getNow() 
+{ 
+    return now; 
+}
+
+Samplerate Server::getSrate() 
+{ 
+    return srate; 
+}
+
+UGenPtr Server::getDac()
+{ 
+    return dac;
+}
+
+UGenPtr Server::getAdc() 
+{ 
+    return adc; 
+}
+
+ShredulerPtr Server::getShreduler() 
+{ 
+    return shreduler; 
 }
 
 // Boost python export
@@ -424,15 +477,16 @@ BOOST_PYTHON_MODULE(libcore)
     class_<Event, EventPtr>("Event")
     	.def("signal",&Event::signal)
     	.def("broadcast",&Event::broadcast);
-
-    class_<Server, ServerPtr>("Server")
-    	.add_static_property("now",&Server::getNow)
-    	.add_static_property("srate",&Server::getSrate)
-    	.add_static_property("dac",&Server::getDac)
-    	.add_static_property("adc",&Server::getAdc)
-    	.add_static_property("shreduler",&Server::getShreduler)
-    	.def("init",&Server::init)
-    	.staticmethod("init")
+    
+    class_<Server, ServerPtr>("Server", no_init)
+    	.add_property("now",&Server::getNow)
+    	.add_property("srate",&Server::getSrate)
+    	.add_property("dac",&Server::getDac)
+    	.add_property("adc",&Server::getAdc)
+    	.add_property("shreduler",&Server::getShreduler)
 	.def("tick",&Server::tick)
-	.staticmethod("tick");
+	.def("start",&Server::start)
+	.staticmethod("start")
+	.def("end",&Server::end)
+	.staticmethod("end");
 }
