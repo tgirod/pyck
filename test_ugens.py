@@ -1,19 +1,15 @@
-import pyck
-import pyck.ugens.osc as osc
-import pyck.ugens.filter as filter
+from pyck import *
+from pyck.ugens.osc import SinOsc
 
-pyck.init()
+o1 = SinOsc()
+o1.freq = 1000
 
-o1 = osc.SinOsc(freq=30)
-o2 = osc.SinOsc(freq=33,gain=0.2)
+Config.dac.addSource(o1)
 
-pyck.connect(o1,pyck.dac)
-pyck.connect(o2,pyck.dac) 
+def run(epoch=Config.srate*10):
+    for _ in range(epoch):
+        Config.tick()
 
-def tick():
-    pyck.now += 1
-    pyck.dac.tick()
-
-for _ in range(pyck.srate*10):
-    tick()
+if __name__ == "__main__":
+    run()
 
