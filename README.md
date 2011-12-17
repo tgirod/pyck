@@ -3,6 +3,36 @@ pyck -- python chuck
 Pyck is an implementation of ChucK's strongly timed approach to audio
 programming. At the present time, it is a proof-of-concept.
 
+News
+----
+
+**2011.12.17**
+
+Thanks to cmake, I got back on track with boost::python, and it's giving
+results ! I'm almost there. PycK is now using RtAudio to communicate with Jack,
+and sound synthesis works !
+
+There's still one problem to solve, though. In their current state, Shreds are
+segfaulting. This problem seems to be caused by RtAudio's use of threads. When
+I call Server.start(), pyck's execution is drived by jack, through the callback
+API. It works fine with sound synthesis because all the code used there is pure
+C++. It's more problematic with shreds because the shreduler has to run some
+python code: the shreds themselves. This callback from an independant C++
+thread to Python is causing quite a mess.
+
+**2011.12.14**
+
+Finally, some noise is coming out of PycK ! As I don't have an audio interface
+coded, I did it by piping the samples to aplay - and it worked ! But before I
+go any further down the audio interface road, there is a lot of optimization to
+do.
+
+**2011.12.12**
+
+I got bored of the boost::python branch. All this compiling and linking between
+modules is such a mess, I'm getting back to pure python for now. I'll probably
+have a shot at cython and see where it gets me.
+
 Why doing this ?
 ----------------
 
