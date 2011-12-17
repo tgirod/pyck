@@ -295,6 +295,7 @@ void Shred::handleYield(object yield)
     ServerPtr s = Server::singleton;
     // yield returned None -> reshredule now
     if (yield.is_none()) {
+	cout << "yield is none" << endl;
 	next = s->now;
 	s->shreduler->addShred(shared_from_this());
 	return;
@@ -303,6 +304,7 @@ void Shred::handleYield(object yield)
     // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
+	cout << "yield is duration" << endl;
 	next = s->now + get_dur();
 	s->shreduler->addShred(shared_from_this());
 	return;
@@ -311,6 +313,7 @@ void Shred::handleYield(object yield)
     // yield returned an Event object -> reshredule in event queue
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
+	cout << "yield is event" << endl;
 	next = s->now;
 	get_event()->addShred(shared_from_this());
 	return;
