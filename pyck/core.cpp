@@ -208,42 +208,6 @@ void Route::fetch(UGenPtr source, UGenPtr target)
     }
 }
 
-// Shreduler class
-///////////////////////////////////////////////////////////////////////////////
-
-Shreduler::Shreduler()
-{}
-
-Shreduler::~Shreduler()
-{}
-
-ShredPtr Shreduler::spork(boost::python::object gen)
-{
-    cout << "sporking" << endl;
-    ShredPtr shred(new Shred(gen));
-    addShred(shred);
-    return shred;
-}
-
-void Shreduler::addShred(ShredPtr shred)
-{
-    queue.push(shred);
-}
-
-void Shreduler::tick()
-{
-    if (queue.empty()){
-	return;
-    }
-    cout << "queue not empty" << endl;
-    ServerPtr s = Server::singleton;
-    while (!queue.empty() && queue.top()->next <= s->now ) {
-	cout << "something to run" << endl;
-	queue.top()->run();
-	queue.pop();
-    }
-}
-
 // Shred class
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -297,7 +261,7 @@ void Shred::handleYield(object yield)
     if (yield.is_none()) {
 	cout << "yield is none" << endl;
 	next = s->now;
-	s->shreduler->addShred(shared_from_this());
+	s->addShred(shared_from_this());
 	return;
     }
     
@@ -306,7 +270,7 @@ void Shred::handleYield(object yield)
     if (get_dur.check()) {
 	cout << "yield is duration" << endl;
 	next = s->now + get_dur();
-	s->shreduler->addShred(shared_from_this());
+	s->addShred(shared_from_this());
 	return;
     }
 
@@ -403,9 +367,9 @@ Server::Server(int channels)
     this->now = 0;
     this->srate = info.sampleRates[0];
     this->io = UGenPtr(new UGen(channels,channels));
-    this->shreduler = ShredulerPtr(new Shreduler());
     
-    audio.openStream(&outputParams, &inputParams, RTAUDIO_FLOAT32, srate, &bufferFrames, &callback, NULL, NULL);
+    audio.openStream(&outputParams, &inputParams, RTAUDIO_FLOAT32, srate, 
+		     &bufferFrames, &callback, NULL, NULL);
 }
 
 Server::~Server()
@@ -450,9 +414,29 @@ void Server::close()
 
 void Server::tick()
 {
-    shreduler->tick();
+    // shreduling
+    if (!queue.empty()){
+	while (!queue.empty() && queue.top()->next <= now ) {
+	    queue.top()->run();
+	    queue.pop();
+	}
+    }
+    // sound synthesis
     io->tick();
     now++;
+}
+
+ShredPtr Server::spork(boost::python::object gen)
+{
+    cout << "sporking" << endl;
+    ShredPtr shred(new Shred(gen));
+    addShred(shred);
+    return shred;
+}
+
+void Server::addShred(ShredPtr shred)
+{
+    queue.push(shred);
 }
 
 Time Server::getNow() 
@@ -470,10 +454,6 @@ UGenPtr Server::getIO()
     return io;
 }
 
-ShredulerPtr Server::getShreduler()
-{ 
-    return shreduler;
-}
 
 int callback(void *outputBuffer, void *inputBuffer, unsigned int bufferFrames,
 	     double streamTime, RtAudioStreamStatus status, void *userData )
@@ -528,10 +508,6 @@ BOOST_PYTHON_MODULE(libcore)
     	.def(init<list>())
     	.def_readonly("sourceSize", &Route::sourceSize)
     	.def_readonly("targetSize", &Route::targetSize);
-
-    class_<Shreduler, ShredulerPtr>("Shreduler", no_init)
-    	.def("spork",&Shreduler::spork)
-    	.def("tick",&Shreduler::tick);
     
     class_<Shred, ShredPtr>("Shred", no_init)
     	.def_readonly("next",&Shred::next)
@@ -546,9 +522,9 @@ BOOST_PYTHON_MODULE(libcore)
 	.def("start",&Server::start)
 	.def("stop",&Server::stop)	
 	.def("close",&Server::close)
+    	.def("spork",&Server::spork)
     	.add_property("now",&Server::getNow)
     	.add_property("srate",&Server::getSrate)
     	.add_property("dac",&Server::getIO)
-    	.add_property("adc",&Server::getIO)
-	.add_property("shreduler",&Server::getShreduler);
+    	.add_property("adc",&Server::getIO);
 }

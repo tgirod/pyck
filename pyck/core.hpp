@@ -19,7 +19,6 @@
 struct UGen;
 struct Route;
 struct Server;
-struct Shreduler;
 struct Shred;
 struct Event;
 
@@ -30,7 +29,6 @@ struct ShredComparator;
 typedef boost::shared_ptr<UGen> UGenPtr;
 typedef boost::shared_ptr<Route> RoutePtr;
 typedef boost::shared_ptr<Server> ServerPtr;
-typedef boost::shared_ptr<Shreduler> ShredulerPtr;
 typedef boost::shared_ptr<Shred> ShredPtr;
 typedef boost::shared_ptr<Event> EventPtr;
 
@@ -108,18 +106,6 @@ struct Route: public boost::enable_shared_from_this<Route>
     void fetch(UGenPtr source, UGenPtr target);
 };
 
-struct Shreduler: public boost::enable_shared_from_this<Shreduler>
-{
-    ShredQueue queue;
-    
-    Shreduler();
-    ~Shreduler();
-    
-    ShredPtr spork(boost::python::object gen);
-    void addShred(ShredPtr shred);
-    void tick();
-};
-
 struct Shred: public boost::enable_shared_from_this<Shred>
 {
     boost::python::object gen; // call this (generator)
@@ -159,7 +145,8 @@ struct Server
     Time now;
     Samplerate srate;
     UGenPtr io;
-    ShredulerPtr shreduler;
+
+    ShredQueue queue;
     
     Server(int channels);
     ~Server();
@@ -174,7 +161,9 @@ struct Server
     Time getNow();
     Samplerate getSrate();
     UGenPtr getIO();
-    ShredulerPtr getShreduler();
+
+    ShredPtr spork(boost::python::object gen);
+    void addShred(ShredPtr shred);
 };
 
 int callback(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames, double streamTime, RtAudioStreamStatus status, void *userData );
