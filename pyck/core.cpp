@@ -219,6 +219,7 @@ Shreduler::~Shreduler()
 
 ShredPtr Shreduler::spork(boost::python::object gen)
 {
+    cout << "sporking" << endl;
     ShredPtr shred(new Shred(gen));
     addShred(shred);
     return shred;
@@ -231,13 +232,15 @@ void Shreduler::addShred(ShredPtr shred)
 
 void Shreduler::tick()
 {
-    if (!queue.empty()) {
-	ShredPtr shred = queue.top();
-	while (!queue.empty() && shred->next <= Server::singleton->now) {
-	    queue.pop();
-	    shred->run();
-	    shred = queue.top();
-	}
+    if (queue.empty()){
+	return;
+    }
+    cout << "queue not empty" << endl;
+    ServerPtr s = Server::singleton;
+    while (!queue.empty() && queue.top()->next <= s->now ) {
+	cout << "something to run" << endl;
+	queue.top()->run();
+	queue.pop();
     }
 }
 
@@ -263,9 +266,12 @@ Shred::~Shred()
 
 void Shred::run()
 {
+    cout << "running shred" << endl;
     // resume the shred and store the result sent by yield
     try {
+	cout << "calling gen.next()" << endl;
 	object yield = gen.attr("next")();
+	cout << "retrieved a yield value" << endl;
 	handleYield(yield);
     } catch (const error_already_set& e) {
 	// StopIteration error means the shred is finished, so we don't have to
@@ -374,34 +380,67 @@ bool ShredComparator::operator()(ShredPtr const& lhs, ShredPtr const& rhs) {
 
 ServerPtr Server::singleton = ServerPtr();
 
-Server::Server(int inputs, int outputs, Samplerate srate)
+Server::Server(int channels)
 {
+    // check if there is at least one audio interface available
+    if (audio.getDeviceCount() == 0) {
+	// FIXME throw exception "no audio interface available"
+    }
+    
+    int device = audio.getDefaultOutputDevice();
+    info = audio.getDeviceInfo(device);
+    
+    inputParams.deviceId = device;
+    inputParams.nChannels = channels;
+    outputParams.deviceId = device;
+    outputParams.nChannels = channels;
+    
+    bufferFrames = 256;
+    
     this->now = 0;
-    this->srate = srate;
-    this->io = UGenPtr(new UGen(outputs,inputs));
+    this->srate = info.sampleRates[0];
+    this->io = UGenPtr(new UGen(channels,channels));
     this->shreduler = ShredulerPtr(new Shreduler());
+    
+    audio.openStream(&outputParams, &inputParams, RTAUDIO_FLOAT32, srate, &bufferFrames, &callback, NULL, NULL);
 }
 
 Server::~Server()
-{}
+{
+    stop();
+    if (audio.isStreamOpen()) {
+	audio.closeStream();
+    }
+}
 
-ServerPtr Server::start(int inputs, int outputs, Samplerate srate)
+ServerPtr Server::open(int channels)
 {
     if (Server::singleton) {
+	// FIXME throw exception server started
 	cerr << "server already started" << endl;
     } else {
-	ServerPtr s(new Server(inputs, outputs, srate));
-	Server::singleton = s;
+	Server::singleton = ServerPtr(new Server(channels));
     }
     return Server::singleton;
 }
 
-void Server::end()
+void Server::start()
+{
+    audio.startStream();
+}
+
+void Server::stop()
+{
+    audio.stopStream();
+}
+
+void Server::close()
 {
     if (Server::singleton) {
 	cout << "ending server" << endl;
 	Server::singleton.reset();
     } else {
+	// FIXME throw exception "no server running"
 	cerr << "no server running" << endl;
     }
 }
@@ -428,9 +467,37 @@ UGenPtr Server::getIO()
     return io;
 }
 
-ShredulerPtr Server::getShreduler() 
+ShredulerPtr Server::getShreduler()
 { 
-    return shreduler; 
+    return shreduler;
+}
+
+int callback(void *outputBuffer, void *inputBuffer, unsigned int bufferFrames,
+	     double streamTime, RtAudioStreamStatus status, void *userData )
+{
+    ServerPtr server = Server::singleton;
+    
+    // points to one value inside the inputBuffer
+    Sample *input = (Sample *) inputBuffer;
+    Sample *output = (Sample *) outputBuffer;
+    
+    for (int i=0; i<bufferFrames; i++) {
+	
+	// copy values from inputBuffer to io.output	
+	for (int j=0; j<server->inputParams.nChannels; j++) {
+	    server->io->output[j] = *input++;
+	}
+	
+	// calling pyck's ugen processing
+	server->tick();
+	
+	// retrieving results
+	for (int j=0; j<server->outputParams.nChannels; j++) {
+	    *output++ = server->io->input[j];
+	}
+    }
+    
+    return 0;
 }
 
 // Boost python export
@@ -459,7 +526,7 @@ BOOST_PYTHON_MODULE(libcore)
     	.def_readonly("sourceSize", &Route::sourceSize)
     	.def_readonly("targetSize", &Route::targetSize);
 
-    class_<Shreduler, ShredulerPtr>("Shreduler")
+    class_<Shreduler, ShredulerPtr>("Shreduler", no_init)
     	.def("spork",&Shreduler::spork)
     	.def("tick",&Shreduler::tick);
     
@@ -472,14 +539,13 @@ BOOST_PYTHON_MODULE(libcore)
     	.def("broadcast",&Event::broadcast);
     
     class_<Server, ServerPtr>("Server", no_init)
+	.def("open",&Server::open).staticmethod("open")
+	.def("start",&Server::start)
+	.def("stop",&Server::stop)	
+	.def("close",&Server::close)
     	.add_property("now",&Server::getNow)
     	.add_property("srate",&Server::getSrate)
     	.add_property("dac",&Server::getIO)
     	.add_property("adc",&Server::getIO)
-    	.add_property("shreduler",&Server::getShreduler)
-	.def("tick",&Server::tick)
-	.def("start",&Server::start)
-	.staticmethod("start")
-	.def("end",&Server::end)
-	.staticmethod("end");
+	.add_property("shreduler",&Server::getShreduler);
 }

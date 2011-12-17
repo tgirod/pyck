@@ -13,6 +13,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
+#include <rtaudio/RtAudio.h>
+
 // structs
 struct UGen;
 struct Route;
@@ -149,17 +151,24 @@ struct Server
 {
     static ServerPtr singleton;
     
+    RtAudio audio;
+    RtAudio::DeviceInfo info;
+    RtAudio::StreamParameters inputParams, outputParams;
+    unsigned int bufferFrames; // number of frames processed at once
+    
     Time now;
     Samplerate srate;
     UGenPtr io;
     ShredulerPtr shreduler;
     
-    Server(int inputs, int outputs, Samplerate srate);
+    Server(int channels);
     ~Server();
     
-    static virtual ServerPtr start(int inputs, int outputs, Samplerate srate);
-    static virtual void end();
-    
+    static ServerPtr open(int channels);
+    void start();
+    void stop();
+    void close();
+
     void tick();
     
     Time getNow();
@@ -167,5 +176,7 @@ struct Server
     UGenPtr getIO();
     ShredulerPtr getShreduler();
 };
+
+int callback(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames, double streamTime, RtAudioStreamStatus status, void *userData );
 
 #endif
