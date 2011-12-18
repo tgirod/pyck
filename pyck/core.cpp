@@ -237,6 +237,7 @@ void Shred::run()
 	object yield = gen.attr("next")();
 	cout << "retrieved a yield value" << endl;
 	handleYield(yield);
+	cout << "yield handled" << endl;
     } catch (const error_already_set& e) {
 	// StopIteration error means the shred is finished, so we don't have to
 	// reshredule it later.
@@ -248,6 +249,7 @@ void Shred::run(object args)
     try {
 	object yield = gen.attr("send")(args);
 	handleYield(yield);
+	cout << "yield handled" << endl;
     } catch (const error_already_set& e) {
 	// StopIteration error means the shred is finished, so we don't have to
 	// reshredule it later.	
@@ -416,10 +418,12 @@ void Server::tick()
 {
     // shreduling
     if (!queue.empty()){
+	gstate = PyGILState_Ensure();
 	while (!queue.empty() && queue.top()->next <= now ) {
 	    queue.top()->run();
 	    queue.pop();
 	}
+	PyGILState_Release(gstate);
     }
     // sound synthesis
     io->tick();

@@ -141,6 +141,7 @@ struct Server
     RtAudio::DeviceInfo info;
     RtAudio::StreamParameters inputParams, outputParams;
     unsigned int bufferFrames; // number of frames processed at once
+    PyGILState_STATE gstate;
     
     Time now;
     Samplerate srate;
