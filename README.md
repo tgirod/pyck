@@ -6,6 +6,11 @@ programming. At the present time, it is a proof-of-concept.
 News
 ----
 
+**2011.12.20**
+
+THAT'S WEIRD. I've just tried to run pyck with ipython2 rather than python2,
+and it works perfectly ! There's clearly something fishy here, but fishy-good.
+
 **2011.12.17**
 
 Thanks to cmake, I got back on track with boost::python, and it's giving
