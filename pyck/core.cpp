@@ -230,14 +230,10 @@ Shred::~Shred()
 
 void Shred::run()
 {
-    cout << "running shred" << endl;
     // resume the shred and store the result sent by yield
     try {
-	cout << "calling gen.next()" << endl;
 	object yield = gen.attr("next")();
-	cout << "retrieved a yield value" << endl;
 	handleYield(yield);
-	cout << "yield handled" << endl;
     } catch (const error_already_set& e) {
 	// StopIteration error means the shred is finished, so we don't have to
 	// reshredule it later.
@@ -249,7 +245,6 @@ void Shred::run(object args)
     try {
 	object yield = gen.attr("send")(args);
 	handleYield(yield);
-	cout << "yield handled" << endl;
     } catch (const error_already_set& e) {
 	// StopIteration error means the shred is finished, so we don't have to
 	// reshredule it later.	
@@ -261,7 +256,6 @@ void Shred::handleYield(object yield)
     ServerPtr s = Server::singleton;
     // yield returned None -> reshredule now
     if (yield.is_none()) {
-	cout << "yield is none" << endl;
 	next = s->now;
 	s->addShred(shared_from_this());
 	return;
@@ -270,7 +264,6 @@ void Shred::handleYield(object yield)
     // yield returned a duration -> reshredule now+duration
     extract<Duration> get_dur(yield);
     if (get_dur.check()) {
-	cout << "yield is duration" << endl;
 	next = s->now + get_dur();
 	s->addShred(shared_from_this());
 	return;
@@ -279,7 +272,6 @@ void Shred::handleYield(object yield)
     // yield returned an Event object -> reshredule in event queue
     extract<EventPtr> get_event(yield);
     if (get_event.check()) {
-	cout << "yield is event" << endl;
 	next = s->now;
 	get_event()->addShred(shared_from_this());
 	return;
@@ -432,7 +424,6 @@ void Server::tick()
 
 ShredPtr Server::spork(boost::python::object gen)
 {
-    cout << "sporking" << endl;
     ShredPtr shred(new Shred(gen));
     addShred(shred);
     return shred;
@@ -474,7 +465,7 @@ int callback(void *outputBuffer, void *inputBuffer, unsigned int bufferFrames,
 	for (int j=0; j<server->inputParams.nChannels; j++) {
 	    server->io->output[j] = *input++;
 	}
-	
+
 	// calling pyck's ugen processing
 	server->tick();
 	
@@ -527,6 +518,7 @@ BOOST_PYTHON_MODULE(libcore)
 	.def("stop",&Server::stop)	
 	.def("close",&Server::close)
     	.def("spork",&Server::spork)
+	.def("tick",&Server::tick)
     	.add_property("now",&Server::getNow)
     	.add_property("srate",&Server::getSrate)
     	.add_property("dac",&Server::getIO)
