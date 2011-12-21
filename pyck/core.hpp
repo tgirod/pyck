@@ -169,4 +169,11 @@ struct Server
 
 int callback(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames, double streamTime, RtAudioStreamStatus status, void *userData );
 
+// Useful functions
+
+Duration ms(float t);
+Duration second(float t);
+Duration minute(float t);
+Duration hour(float t);
+
 #endif

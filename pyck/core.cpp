@@ -478,49 +478,84 @@ int callback(void *outputBuffer, void *inputBuffer, unsigned int bufferFrames,
     return 0;
 }
 
+// Useful functions
+///////////////////////////////////////////////////////////////////////////////
+
+Duration ms(float t)
+{
+  return (int) (Server::singleton->srate * t / 1000);
+}
+
+Duration second(float t)
+{
+  return (int) (Server::singleton->srate * t);
+}
+
+Duration minute(float t)
+{
+  return (int) (Server::singleton->srate * t * 60);
+}
+
+Duration hour(float t)
+{
+  return (int) (Server::singleton->srate * t * 120);
+}
+
+Duration day(float t)
+{
+  return (int) (Server::singleton->srate * t * 2880);
+}
+
+
 // Boost python export
 ///////////////////////////////////////////////////////////////////////////////
 
 BOOST_PYTHON_MODULE(libcore)
 {
-    class_<UGen, UGenPtr>("UGen", init<int,int>())
-    	.def(init<>())
-    	.def_readonly("inputSize",&UGen::inputSize)
-    	.def_readonly("outputSize",&UGen::outputSize)
-    	.def("input",&UGen::getInput)
-    	.def("setInput",&UGen::setInput)
-    	.def("output",&UGen::getOutput)
-    	.def("setOutput",&UGen::setOutput)
-    	.def("addSource",&UGen::addSourceGuess)
-    	.def("addSource",&UGen::addSource)
-    	.def("removeSource",&UGen::removeSource)
-    	.def("tick", &UGen::tick)
-    	.def("fetch",&UGen::fetch)
-    	.def("compute",&UGen::compute);
+  class_<UGen, UGenPtr>("UGen", init<int,int>())
+    .def(init<>())    
+    .def_readonly("inputSize",&UGen::inputSize)  
+    .def_readonly("outputSize",&UGen::outputSize)
+    .def("input",&UGen::getInput)
+    .def("setInput",&UGen::setInput)
+    .def("output",&UGen::getOutput)
+    .def("setOutput",&UGen::setOutput)
+    .def("addSource",&UGen::addSourceGuess)
+    .def("addSource",&UGen::addSource)
+    .def("removeSource",&UGen::removeSource)
+    .def("tick", &UGen::tick)
+    .def("fetch",&UGen::fetch)
+    .def("compute",&UGen::compute);
+
+  class_<Route, RoutePtr>("Route", init<int, int>())
+    .def(init<UGenPtr, UGenPtr>())
+    .def(init<list>())    
+    .def_readonly("sourceSize", &Route::sourceSize)
+    .def_readonly("targetSize", &Route::targetSize);
     
-    class_<Route, RoutePtr>("Route", init<int, int>())
-    	.def(init<UGenPtr, UGenPtr>())
-    	.def(init<list>())
-    	.def_readonly("sourceSize", &Route::sourceSize)
-    	.def_readonly("targetSize", &Route::targetSize);
+  class_<Shred, ShredPtr>("Shred", no_init)
+    .def_readonly("next",&Shred::next)
+    .def("kill",&Shred::kill);
     
-    class_<Shred, ShredPtr>("Shred", no_init)
-    	.def_readonly("next",&Shred::next)
-    	.def("kill",&Shred::kill);
-    
-    class_<Event, EventPtr>("Event")
-    	.def("signal",&Event::signal)
-    	.def("broadcast",&Event::broadcast);
-    
-    class_<Server, ServerPtr>("Server", no_init)
-	.def("open",&Server::open).staticmethod("open")
-	.def("start",&Server::start)
-	.def("stop",&Server::stop)	
-	.def("close",&Server::close)
-    	.def("spork",&Server::spork)
-	.def("tick",&Server::tick)
-    	.add_property("now",&Server::getNow)
-    	.add_property("srate",&Server::getSrate)
-    	.add_property("dac",&Server::getIO)
-    	.add_property("adc",&Server::getIO);
+  class_<Event, EventPtr>("Event")
+    .def("signal",&Event::signal)
+    .def("broadcast",&Event::broadcast);
+  
+  class_<Server, ServerPtr>("Server", no_init)
+    .def("open",&Server::open).staticmethod("open")
+    .def("start",&Server::start)
+    .def("stop",&Server::stop)	
+    .def("close",&Server::close)
+    .def("spork",&Server::spork)
+	  .def("tick",&Server::tick)
+    .add_property("now",&Server::getNow)
+    .add_property("srate",&Server::getSrate)
+    .add_property("dac",&Server::getIO)
+    .add_property("adc",&Server::getIO);
+
+  def("ms",&ms);
+  def("second",&second);
+  def("minute",&minute);
+  def("hour",&hour);
+  def("day",&day);
 }
