@@ -10,11 +10,17 @@
 
 // structs
 struct Osc;
-struct SinOsc;
+struct Sin;
+struct Square;
+struct Saw;
+struct Pulse;
 
 // shared pointers
 typedef boost::shared_ptr<Osc> OscPtr;
-typedef boost::shared_ptr<SinOsc> SinOscPtr;
+typedef boost::shared_ptr<Sin> SinPtr;
+typedef boost::shared_ptr<Square> SquarePtr;
+typedef boost::shared_ptr<Saw> SawPtr;
+typedef boost::shared_ptr<Pulse> PulsePtr;
 
 struct Osc : UGen
 {
@@ -22,9 +28,14 @@ struct Osc : UGen
     float phase;
     float gain;
     
+    float w; // angular speed in radians/sample
+
     Osc();
     ~Osc();
-    
+
+    virtual void init();
+    virtual void compute();
+
     float getFreq();
     virtual void setFreq(float freq);
     
@@ -36,20 +47,36 @@ struct Osc : UGen
     
 };
 
-struct SinOsc : Osc
+struct Sin : Osc
 {
     float y[3]; // previous values
-    float w; // angular speed in radians/sample
     float p; // iteration constant
     
-    SinOsc();
-    ~SinOsc();
-    
-    void setFreq(float freq);
-    void setPhase(float phase);
-
-    void update();
+    void init();
     void compute();    
+};
+
+struct Square : Osc
+{
+  void compute();
+};
+
+struct Saw : Osc
+{
+  void compute();
+};
+
+struct Pulse : Osc
+{
+  float pwm;
+
+  Pulse();
+  ~Pulse();
+
+  void compute();
+
+  float getPwm();
+  void setPwm(float pwm);
 };
 
 #endif

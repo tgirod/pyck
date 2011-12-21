@@ -12,10 +12,24 @@ Osc::Osc() : UGen::UGen(0,1)
     freq = 440.0;
     phase = 0.0;
     gain = 1.0;
+    init();
 }
 
 Osc::~Osc()
 {}
+
+void Osc::init()
+{
+  w = freq * 2 * M_PI / Server::singleton->srate;
+}
+
+void Osc::compute()
+{
+  phase += w;
+  if (M_PI < phase) {
+    phase -= 2 * M_PI;
+  }
+}
 
 float Osc::getFreq()
 {
@@ -25,7 +39,8 @@ float Osc::getFreq()
 void Osc::setFreq(float freq)
 {
     if (0 < freq) {
-	this->freq = freq;
+      this->freq = freq;
+      init();
     }
 }
 
@@ -37,7 +52,8 @@ float Osc::getPhase()
 void Osc::setPhase(float phase)
 {
     if (-M_PI < phase && phase <= M_PI) {
-	this->phase = phase;
+	    this->phase = phase;
+      init();
     }
 }
 
@@ -49,66 +65,106 @@ float Osc::getGain()
 void Osc::setGain(float gain)
 {
     if (0 <= gain) {
-	this->gain = gain;
+	    this->gain = gain;
+      init();
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// class SinOsc
+// class Sin
 
-SinOsc::SinOsc()
+void Sin::init()
 {
-    update();
+  Osc::init();
+  p = 2 * cos(w);
+  y[0] = sin(-2 * w + phase);
+  y[1] = sin(-1 * w + phase);
+  y[2] = 0;
 }
 
-SinOsc::~SinOsc()
+void Sin::compute()
+{
+  y[2] = p * y[1] - y[0];
+  y[0] = y[1];
+  y[1] = y[2];
+  output[0] = y[2] * gain;
+  Osc::compute();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// class Square
+
+void Square::compute()
+{
+  if (0 < phase) {
+    output[0] = gain;
+  } else {
+    output[0] = -gain;
+  }
+
+  Osc::compute();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// class Saw
+
+void Saw::compute()
+{
+  output[0] = phase/M_PI * gain;
+  Osc::compute();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// class Pulse
+
+Pulse::Pulse()
+{
+  pwm = 0.5;
+}
+
+Pulse::~Pulse()
 {}
 
-void SinOsc::setFreq(float freq)
+void Pulse::compute()
 {
-    if (0 < freq) {
-	this->freq = freq;
-	update();
-    }
+  if(M_PI*(pwm-0.5) < phase){
+    output[0] = gain;
+  } else {
+    output[0] = -gain;
+  }
+  Osc::compute();
 }
 
-void SinOsc::setPhase(float phase)
+float Pulse::getPwm()
 {
-    if (-M_PI < phase && phase <= M_PI) {
-	this->phase = phase;
-	update();
-    }
+  return pwm;
 }
 
-void SinOsc::update()
+void Pulse::setPwm(float pwm)
 {
-    w = freq * 2 * M_PI / Server::singleton->srate;
-    p = 2 * cos(w);
-    y[0] = sin(-2 * w + phase);
-    y[1] = sin(-1 * w + phase);
-    y[2] = 0;
+  if (0 <= pwm && pwm <= 1) {
+    this->pwm = pwm;
+  }
 }
 
-void SinOsc::compute()
-{
-    y[2] = p * y[1] - y[0];
-    y[0] = y[1];
-    y[1] = y[2];
-    output[0] = y[2] * gain;
-    phase += w;
-    if (M_PI < phase) {
-	phase -= 2 * M_PI;
-    }
-}
+///////////////////////////////////////////////////////////////////////////////
+// boost export
 
 BOOST_PYTHON_MODULE (libosc)
 {
     class_<Osc, bases<UGen>, OscPtr>("Osc")
-	.add_property("freq", &Osc::getFreq, &Osc::setFreq)
-	.add_property("phase", &Osc::getPhase, &Osc::setPhase)
-	.add_property("gain", &Osc::getGain, &Osc::setGain);
-    
-    class_<SinOsc, bases<Osc>, SinOscPtr>("SinOsc")
-	.add_property("freq", &Osc::getFreq, &SinOsc::setFreq)
-	.add_property("phase", &Osc::getPhase, &SinOsc::setPhase);
+      .add_property("freq", &Osc::getFreq, &Osc::setFreq)
+      .add_property("phase", &Osc::getPhase, &Osc::setPhase)
+      .add_property("gain", &Osc::getGain, &Osc::setGain);
+
+    class_<Sin, bases<Osc>, SinPtr>("Sin");
+
+    class_<Square, bases<Osc>, SquarePtr>("Square");
+
+    class_<Saw, bases<Osc>, SawPtr>("Saw");
+
+    class_<Pulse, bases<Osc>, PulsePtr>("Pulse")
+      .add_property("pwm", &Pulse::getPwm, &Pulse::setPwm);
+
 }
