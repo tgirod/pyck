@@ -67,7 +67,6 @@ struct UGen: public boost::enable_shared_from_this<UGen>
 
     UGen();
     UGen(int inputs, int outputs);
-    void init();
     ~UGen();
     
     Time getLast();

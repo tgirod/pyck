@@ -33,18 +33,18 @@ struct Osc : UGen
     Osc();
     ~Osc();
 
-    virtual void init();
-    virtual void compute();
-
     float getFreq();
-    virtual void setFreq(float freq);
+    void setFreq(float freq);
     
     float getPhase();
-    virtual void setPhase(float phase);
+    void setPhase(float phase);
     
     float getGain();
-    virtual void setGain(float gain);
-    
+    void setGain(float gain);
+
+    // (re)initialize internal values whenever a parameter is changed.
+    virtual void init();
+    virtual void compute();
 };
 
 struct Sin : Osc
@@ -52,17 +52,27 @@ struct Sin : Osc
     float y[3]; // previous values
     float p; // iteration constant
     
-    void init();
-    void compute();    
+    Sin();
+    ~Sin();
+
+    virtual void init();
+    virtual void compute();    
 };
 
 struct Square : Osc
 {
+
+  Square();
+  ~Square();
+
   void compute();
 };
 
 struct Saw : Osc
 {
+  Saw();
+  ~Saw();
+
   void compute();
 };
 
