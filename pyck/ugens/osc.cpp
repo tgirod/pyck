@@ -143,7 +143,7 @@ void Saw::compute()
 
 Pulse::Pulse() : Osc::Osc()
 {
-    pwm = 0.5;
+    width = 0.5;
 }
 
 Pulse::~Pulse()
@@ -151,7 +151,7 @@ Pulse::~Pulse()
 
 void Pulse::compute()
 {
-    if(M_PI*(pwm-0.5) < phase){
+    if(M_PI*(width-0.5) < phase){
         output[0] = gain;
     } else {
         output[0] = -gain;
@@ -159,17 +159,64 @@ void Pulse::compute()
     Osc::compute();
 }
 
-float Pulse::getPwm()
+float Pulse::getWidth()
 {
-    return pwm;
+    return width;
 }
 
-void Pulse::setPwm(float pwm)
+void Pulse::setWidth(float width)
 {
-    if (0 <= pwm && pwm <= 1) {
-        this->pwm = pwm;
+    if (0 <= width && width <= 1) {
+        this->width = width;
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// class Tri
+
+Tri::Tri() : Osc::Osc()
+{
+    width = 0.5;
+}
+
+Tri::~Tri()
+{}
+
+void Tri::compute()
+{
+    float pw = M_PI * width;
+
+    if (phase < -pw) {
+        output[0] = (-M_PI - phase) / (M_PI - pw);
+    } else if (phase == -pw) {
+        output[0] = -1;
+    } else if (phase < 0) {
+        output[0] = phase / pw;
+    } else if (phase == 0) {
+        output[0] = 0;
+    } else if (phase < pw) {
+        output[0] = phase / pw;
+    } else if (phase == pw) {
+        output[0] = 1;
+    } else if (pw < phase) {
+        output[0] = (M_PI - phase) / (M_PI - pw);
+    }
+
+    Osc::compute();
+}
+
+float Tri::getWidth()
+{
+    return width;
+}
+
+void Tri::setWidth(float width)
+{
+    if (0 <= width && width <= 1) {
+        this->width = width;
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // boost export
@@ -188,6 +235,9 @@ BOOST_PYTHON_MODULE (libosc)
     class_<Saw, bases<Osc>, SawPtr>("Saw");
 
     class_<Pulse, bases<Osc>, PulsePtr>("Pulse")
-        .add_property("pwm", &Pulse::getPwm, &Pulse::setPwm);
+        .add_property("width", &Pulse::getWidth, &Pulse::setWidth);
+
+    class_<Tri, bases<Osc>, TriPtr>("Tri")
+        .add_property("width", &Tri::getWidth, &Tri::setWidth);
 
 }
