@@ -45,6 +45,27 @@ UGen::UGen(int inputs, int outputs)
     resetOutput();
 }
 
+UGen::UGen(UGenPtr source)
+{
+    inputSize = source->outputSize;
+    outputSize = inputSize;
+
+    // special case if the server is not yet started
+    if (Server::singleton) {
+        this->last = Server::singleton->now;
+    } else {
+        this->last = 0;
+    }
+
+    this->input = shared_array<Sample>(new Sample[inputSize]);
+    resetInput();
+
+    this->output = shared_array<Sample>(new Sample[outputSize]);
+    resetOutput();
+
+    addSource(source);
+}
+
 UGen::~UGen()
 {}
 
@@ -87,29 +108,24 @@ void UGen::resetOutput()
     }    
 }
 
-void UGen::addSource(UGenPtr source, RoutePtr route)
+void UGen::addSource(UGenPtr source)
 {
-    UGenPtr target = shared_from_this();
-    if (source->outputSize == route->sourceSize && 
-            target->inputSize == route->targetSize) {
+    int sourceSize = source->outputSize;
+    int targetSize = this->inputSize;
+    RoutePtr route(new Route(sourceSize, targetSize));
+    addSourceRoute(source,route);
+}
 
-        // BUGFIX boost::python doing nasty things with shared_ptr
-        weak_ptr<UGen> u(source->shared_from_this());
-        this->sources[u] = route;
-    } else {
-        cerr << "route shape does not match" << endl;
-    }
+void UGen::addSourceRoute(UGenPtr source, RoutePtr route)
+{
+    // BUGFIX boost::python doing nasty things with shared_ptr
+    weak_ptr<UGen> u(source->shared_from_this());
+    this->sources[u] = route;
 }
 
 void UGen::addSourceList(UGenPtr source, list route)
 {
     // FIXME build a route from a python list
-}
-
-void UGen::addSourceGuess(UGenPtr source)
-{
-    RoutePtr route(new Route(source,shared_from_this()));
-    addSource(source,route);
 }
 
 void UGen::removeSource(UGenPtr source)
@@ -520,16 +536,17 @@ Duration day(float t)
 
 BOOST_PYTHON_MODULE(libcore)
 {
-    class_<UGen, UGenPtr>("UGen", init<int,int>())
-        .def(init<>())    
+    class_<UGen, UGenPtr>("UGen")
+        .def(init<int,int>())    
+        .def(init<UGenPtr>())
         .def_readonly("inputSize",&UGen::inputSize)  
         .def_readonly("outputSize",&UGen::outputSize)
         .def("input",&UGen::getInput)
         .def("setInput",&UGen::setInput)
         .def("output",&UGen::getOutput)
         .def("setOutput",&UGen::setOutput)
-        .def("addSource",&UGen::addSourceGuess)
         .def("addSource",&UGen::addSource)
+        .def("addSource",&UGen::addSourceRoute)
         .def("removeSource",&UGen::removeSource)
         .def("tick", &UGen::tick)
         .def("fetch",&UGen::fetch)

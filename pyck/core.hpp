@@ -67,6 +67,7 @@ struct UGen: public boost::enable_shared_from_this<UGen>
 
     UGen();
     UGen(int inputs, int outputs);
+    UGen(UGenPtr source);
     ~UGen();
     
     Time getLast();
@@ -79,9 +80,9 @@ struct UGen: public boost::enable_shared_from_this<UGen>
     void setOutput(int channel, Sample value);
     void resetOutput();
     
-    void addSource(UGenPtr source, RoutePtr route);
+    void addSource(UGenPtr source);
     void addSourceList(UGenPtr source, boost::python::list route);
-    void addSourceGuess(UGenPtr source);
+    void addSourceRoute(UGenPtr source, RoutePtr route);
     
     void removeSource(UGenPtr source);
     
