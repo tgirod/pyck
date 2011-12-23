@@ -11,7 +11,7 @@ Osc::Osc() : UGen::UGen(0,1)
 {
     freq = 440.0;
     phase = 0.0;
-    gain = 1.0;
+    gain = 0.5;
     this->init();
 }
 
@@ -59,7 +59,6 @@ void Osc::setGain(float gain)
 
 void Osc::init()
 {
-    cout << "Osc::init()" << endl;
     w = freq * 2 * M_PI / Server::singleton->srate;
 }
 
@@ -85,7 +84,6 @@ Sin::~Sin()
 
 void Sin::init()
 {
-    cout << "Sin::init()" << endl;
     Osc::init();
     p = 2 * cos(w);
     y[0] = sin(-2 * w + phase);
