@@ -6,6 +6,27 @@ programming. At the present time, it is a proof-of-concept.
 News
 ----
 
+**2011.12.24**
+
+pyck is running, I added a few ugens, but I might be facing a problem. I
+accidentally did a stress test earlier by sporking 7 shreds in parallel, each
+of them creating a few ugens to play a sound. The result is pretty bad, as it
+caused many xruns.
+
+I am not sure how this can be solved. A few approaches that comes to my mind :
+
+- restricting the code inside shreds to a domain specific language and parsing
+this code to a native representation when the shred is sporked. But this
+mean taking the same path as ChucK, specifically the one I want to avoid in the
+first place.
+- reorienting the project to rely heavily on Pypy, which provides a JIT
+compiler and much better performances.
+  - PycK's python branch already runs on pypy,
+  - performances are far away from what the C++ branch achieves in term of
+  sound synthesis
+  - I didn't try to interface with RtAudio, and thus don't know how it will
+  behave with callback-driven execution
+
 **2011.12.20**
 
 THAT'S WEIRD. I've just tried to run pyck with ipython2 rather than python2,
