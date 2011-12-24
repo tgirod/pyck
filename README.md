@@ -11,7 +11,8 @@ News
 pyck is running, I added a few ugens, but I might be facing a problem. I
 accidentally did a stress test earlier by sporking 7 shreds in parallel, each
 of them creating a few ugens to play a sound. The result is pretty bad, as it
-caused many xruns.
+caused many xruns. Obviously, this is caused by the evaluation of python code,
+which is too slow to fulfill the realtime requirements.
 
 I am not sure how this can be solved. A few approaches that comes to my mind :
 
@@ -26,6 +27,8 @@ compiler and much better performances.
   sound synthesis
   - I didn't try to interface with RtAudio, and thus don't know how it will
   behave with callback-driven execution
+  - at the present time, boost::python is not compatible with Pypy. That means
+  rewriting a good part of the native code to interface it through ctypes.
 
 **2011.12.20**
 
